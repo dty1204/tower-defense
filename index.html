@@ -293,6 +293,7 @@ canvas {
         <button class="tower-btn" data-tower="0"><span class="icon">▣</span><span class="cost">50💰</span>方块</button>
         <button class="tower-btn" data-tower="1"><span class="icon">●</span><span class="cost">80💰</span>快速</button>
         <button class="tower-btn" data-tower="2"><span class="icon">▲</span><span class="cost">120💰</span>溅射</button>
+        <button class="tower-btn" data-tower="3"><span class="icon">◆</span><span class="cost">90💰</span>毒药</button>
         <button id="sell-btn" class="tower-btn"><span class="icon">💰</span>出售</button>
     </div>
     <button id="start-btn">▶ 开始波次</button>
@@ -333,6 +334,7 @@ const TOWER_DEFS = [
     { name: '方块塔', shape: 'square', color: '#4488ff', darkColor: '#2266cc', cost: 50, damage: 12, range: 3.0, fireRate: 1.0, projSpeed: 8, splash: false },
     { name: '快速塔', shape: 'circle', color: '#44ff44', darkColor: '#22cc22', cost: 80, damage: 5, range: 3.5, fireRate: 2.5, projSpeed: 12, splash: false },
     { name: '溅射塔', shape: 'triangle', color: '#ff4444', darkColor: '#cc2222', cost: 120, damage: 22, range: 2.5, fireRate: 0.6, projSpeed: 6, splash: true, splashRadius: 1.5 },
+    { name: '毒药塔', shape: 'diamond', color: '#66ff66', darkColor: '#33cc33', cost: 90, damage: 6, range: 3.2, fireRate: 1.2, projSpeed: 10, splash: false, poison: true, bleedDamage: 10, bleedDuration: 3, slowFactor: 0.5, slowDuration: 3 },
 ];
 const ENEMY_DEFS = [
     { name: '侦察兵', shape: 'circle', color: '#ff4444', hp: 120, speed: 3.0, reward: 15, leakLives: 1, size: 0.4 },
@@ -575,16 +577,34 @@ function updateSpawn(dt) {
             hp: def.hp,
             maxHp: def.hp,
             speed: def.speed,
+            origSpeed: def.speed,
             reward: def.reward,
             leakLives: def.leakLives,
             size: def.size,
             blocked: false,
             blockedTimer: 0,
+            slowTimer: 0,
+            bleedTimer: 0,
         });
     }
 }
 function updateEnemies(dt) {
     for (const e of enemies) {
+        // Bleed (poison DOT)
+        if (e.bleedTimer > 0) {
+            e.hp -= 10 * dt; // bleed damage per second
+            e.bleedTimer = Math.max(0, e.bleedTimer - dt);
+            // Spawn periodic bleed particles
+            if (Math.random() < 4 * dt) {
+                effects.push({ col: e.col + (Math.random()-0.5)*0.6, row: e.row + (Math.random()-0.5)*0.6, type: 'bleed', timer: 0.4, maxTimer: 0.4 });
+            }
+        }
+        // Slow
+        if (e.slowTimer > 0) {
+            e.slowTimer = Math.max(0, e.slowTimer - dt);
+        }
+        const effSpeed = e.slowTimer > 0 ? e.origSpeed * 0.5 : e.origSpeed;
+
         e.blockedTimer = Math.max(0, e.blockedTimer - dt);
         if (e.blockedTimer > 0) continue;
         if (e.wpIdx >= WAYPOINTS.length) continue;
@@ -592,7 +612,7 @@ function updateEnemies(dt) {
         const dx = target.col - e.col;
         const dy = target.row - e.row;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const moveDist = e.speed * dt;
+        const moveDist = effSpeed * dt;
         if (moveDist >= dist) {
             e.col = target.col;
             e.row = target.row;
@@ -644,6 +664,9 @@ function updateTowers(dt) {
                 speed: def.projSpeed,
                 splash: def.splash,
                 splashRadius: def.splashRadius || 0,
+                poison: def.poison || false,
+                bleedDuration: def.bleedDuration || 0,
+                slowDuration: def.slowDuration || 0,
                 color: def.color,
             });
             t.cooldown = 1 / def.fireRate;
@@ -672,6 +695,11 @@ function updateProjectiles(dt) {
                     }
                 }
                 effects.push({ col: p.target.col, row: p.target.row, type: 'splash', timer: 0.3, maxTimer: 0.3, radius: p.splashRadius });
+            } else if (p.poison) {
+                p.target.hp -= p.damage;
+                p.target.bleedTimer = Math.max(p.target.bleedTimer, p.bleedDuration);
+                p.target.slowTimer = Math.max(p.target.slowTimer, p.slowDuration);
+                effects.push({ col: p.target.col, row: p.target.row, type: 'poisonHit', timer: 0.3, maxTimer: 0.3 });
             } else {
                 p.target.hp -= p.damage;
                 effects.push({ col: p.target.col, row: p.target.row, type: 'hit', timer: 0.15, maxTimer: 0.15 });
@@ -966,6 +994,22 @@ function renderEnemies() {
             ctx.arc(x, y, size / 2 + 4, 0, Math.PI * 2);
             ctx.stroke();
         }
+        // Poison overlay (green tint + slow icon)
+        if (e.bleedTimer > 0 || e.slowTimer > 0) {
+            ctx.save();
+            ctx.globalAlpha = 0.3;
+            ctx.fillStyle = '#66ff66';
+            ctx.beginPath();
+            ctx.arc(x, y, size / 2 + 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 0.6;
+            ctx.strokeStyle = '#33cc33';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(x, y, size / 2 + 3, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
     }
 }
 
@@ -975,7 +1019,15 @@ function renderProjectiles() {
         const y = toPixelY(p.row);
         const size = cellSize * 0.12;
         ctx.fillStyle = p.color;
-        if (p.splash) {
+        if (p.poison) {
+            // Green poison blob
+            ctx.beginPath();
+            ctx.arc(x, y, size * 1.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#33cc33';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        } else if (p.splash) {
             ctx.beginPath();
             ctx.moveTo(x, y - size);
             ctx.lineTo(x + size, y + size * 0.5);
@@ -1045,6 +1097,16 @@ function renderEffects() {
             ctx.fillStyle = `rgba(255,215,0,${t})`;
             ctx.font = `${Math.floor(14 + t * 6)}px Arial`;
             ctx.fillText('+' + ef.amount + '💰', x - 18, y - 20 - t * 15);
+        } else if (ef.type === 'bleed') {
+            ctx.fillStyle = `rgba(100,255,100,${t})`;
+            ctx.font = `${Math.floor(8 + t * 6)}px Arial`;
+            ctx.fillText('⬤', x - 3, y - 3 - t * 8);
+        } else if (ef.type === 'poisonHit') {
+            ctx.strokeStyle = `rgba(100,255,100,${t})`;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(x, y, cellSize * 0.5 * (2 - t), 0, Math.PI * 2);
+            ctx.stroke();
         } else if (ef.type === 'leak') {
             ctx.fillStyle = `rgba(255,0,0,${t})`;
             ctx.font = `${Math.floor(16 + t * 8)}px Arial`;
@@ -1085,6 +1147,9 @@ function drawShape(ctx, shape, x, y, half, fillColor, strokeColor, rotation) {
                 else ctx.lineTo(px, py);
             }
             ctx.closePath();
+        } else if (shape === 'diamond') {
+            ctx.rotate(Math.PI / 4);
+            ctx.rect(-half * 0.7, -half * 0.7, half * 1.4, half * 1.4);
         } else if (shape === 'hexagon') {
             for (let i = 0; i < 6; i++) {
                 const a = (i * 2 * Math.PI / 6) - Math.PI / 2;
