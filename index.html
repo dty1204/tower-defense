@@ -32,6 +32,27 @@ html, body {
     position: relative;
     min-height: 0;
 }
+#speed-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 44px;
+    height: 44px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 8px;
+    background: rgba(20,20,40,0.85);
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+}
+#speed-btn:active {
+    background: rgba(80,80,120,0.9);
+}
 canvas {
     display: block;
     width: 100%;
@@ -261,6 +282,7 @@ canvas {
 <div id="game-container">
     <div id="canvas-wrapper">
         <canvas id="gameCanvas"></canvas>
+        <button id="speed-btn" title="加速">▶</button>
     </div>
     <div id="info-bar">
         <span class="gold">💰 <span id="gold-val">250</span></span>
@@ -439,6 +461,10 @@ let grid = [];
 let cellSize = 0;
 let canvasOffsetX = 0;
 let canvasOffsetY = 0;
+let speedState = 0; // 0=1x, 1=2x, 2=4x
+const SPEED_VALUES = [1, 2, 4];
+const SPEED_ICONS = ['▶', '▶▶', '▶▶▶'];
+let speedMultiplier = 1;
 
 // ========== SECTION 3: DOM REFS ==========
 const canvas = document.getElementById('gameCanvas');
@@ -453,6 +479,14 @@ const sellBtn = document.getElementById('sell-btn');
 const gameOverOverlay = document.getElementById('game-over-overlay');
 const goTitle = document.getElementById('go-title');
 const goMsg = document.getElementById('go-msg');
+const speedBtn = document.getElementById('speed-btn');
+
+function toggleSpeed() {
+    speedState = (speedState + 1) % 3;
+    speedMultiplier = SPEED_VALUES[speedState];
+    speedBtn.textContent = SPEED_ICONS[speedState];
+}
+speedBtn.addEventListener('click', toggleSpeed);
 
 // ========== SECTION 4: INITIALIZATION ==========
 function init() {
@@ -471,6 +505,9 @@ function init() {
     selectedTowerType = null;
     sellMode = false;
     inputState = { up: false, down: false, left: false, right: false };
+    speedState = 0;
+    speedMultiplier = 1;
+    speedBtn.textContent = SPEED_ICONS[0];
     player = { col: 5.5, row: 12, hp: 60, maxHp: 60, attackCooldown: 0, attackRange: 1.2, damage: 10, attackRate: 0.8, speed: 2.5 };
     updateUI();
     document.querySelectorAll('.tower-btn[data-tower]').forEach(b => b.classList.remove('selected'));
@@ -505,12 +542,13 @@ function gameLoop(timestamp) {
     lastTime = timestamp;
 
     if (gameState === 'PLAYING') {
-        updateSpawn(dt);
-        updateEnemies(dt);
-        updateTowers(dt);
-        updateProjectiles(dt);
-        updatePlayer(dt);
-        updateEffects(dt);
+        const sdt = dt * speedMultiplier;
+        updateSpawn(sdt);
+        updateEnemies(sdt);
+        updateTowers(sdt);
+        updateProjectiles(sdt);
+        updatePlayer(sdt);
+        updateEffects(sdt);
         checkWaveComplete();
     } else if (gameState === 'PLANNING') {
         updateTowerIdleAnim(dt);
