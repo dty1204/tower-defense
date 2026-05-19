@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<title>几何塔防</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    background: #0a0a1a;
+    font-family: Arial, sans-serif;
+}
+#game-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    width: 100vw;
+    max-width: 500px;
+    margin: 0 auto;
+}
+#canvas-wrapper {
+    flex: 1;
+    position: relative;
+    min-height: 0;
+}
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+#info-bar {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    background: #141428;
+    color: #fff;
+    font-size: 15px;
+    font-weight: bold;
+    border-top: 2px solid #2a2a4a;
+    flex-shrink: 0;
+}
+#info-bar .gold { color: #ffd700; }
+#info-bar .lives { color: #ff4444; }
+#info-bar .wave { color: #88ccff; }
+#planning-panel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px;
+    justify-content: center;
+    background: #0d0d20;
+    border-top: 2px solid #2a2a4a;
+    flex-shrink: 0;
+}
+#playing-panel {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    background: #0d0d20;
+    border-top: 2px solid #2a2a4a;
+    flex-shrink: 0;
+    gap: 4px;
+}
+.tower-btn {
+    width: 72px;
+    height: 56px;
+    border: 2px solid #444;
+    border-radius: 10px;
+    background: #1a1a2e;
+    color: #ccc;
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+.tower-btn:active { background: #2a2a4e; }
+.tower-btn.selected {
+    border-color: #00ffff;
+    box-shadow: 0 0 12px rgba(0,255,255,0.4);
+    color: #fff;
+}
+.tower-btn .icon { font-size: 20px; line-height: 1; }
+.tower-btn .cost { font-size: 10px; color: #ffd700; }
+#sell-btn { border-color: #884444; }
+#sell-btn.selected { border-color: #ff4444; box-shadow: 0 0 12px rgba(255,64,64,0.4); }
+#start-btn {
+    width: 92%;
+    height: 50px;
+    background: linear-gradient(180deg, #3a3, #2a2);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: bold;
+    margin: 4px auto;
+    display: block;
+    cursor: pointer;
+    letter-spacing: 2px;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+}
+#start-btn:active { background: #2a2; }
+#start-btn.disabled {
+    background: #333;
+    color: #666;
+    pointer-events: none;
+}
+.dpad-row {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+}
+.dpad-btn {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    border: 2px solid #555;
+    background: rgba(255,255,255,0.08);
+    color: #ccc;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.1s;
+}
+.dpad-btn.active { background: rgba(0,255,255,0.25); border-color: #0ff; }
+#game-over-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+}
+#game-over-overlay h2 { font-size: 36px; margin-bottom: 16px; }
+#game-over-overlay p { font-size: 18px; margin-bottom: 20px; }
+#game-over-overlay button {
+    padding: 14px 40px;
+    font-size: 18px;
+    border: none;
+    border-radius: 12px;
+    background: #4488ff;
+    color: #fff;
+    cursor: pointer;
+}
+#game-over-overlay .victory { color: #ffd700; }
+#game-over-overlay .defeat { color: #ff4444; }
+
+/* Tutorial overlay */
+#tutorial-overlay {
+    display: flex;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.88);
+    z-index: 200;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+#tutorial-card {
+    background: #1a1a2e;
+    border: 2px solid #3a3a5a;
+    border-radius: 16px;
+    padding: 24px 20px 16px;
+    max-width: 380px;
+    width: 100%;
+    text-align: center;
+    color: #ddd;
+}
+#tutorial-title {
+    font-size: 24px;
+    color: #ffd700;
+    margin-bottom: 20px;
+    letter-spacing: 2px;
+}
+#tutorial-content {
+    text-align: left;
+    min-height: 180px;
+    font-size: 14px;
+    line-height: 1.8;
+    color: #ccc;
+    padding: 0 4px;
+}
+#tutorial-content p { margin: 6px 0; }
+#tutorial-content .highlight { color: #ffd700; font-weight: bold; }
+#tutorial-content .key { color: #00ddff; }
+#tutorial-content .warn { color: #ff6666; }
+#tutorial-dots {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 14px 0;
+}
+#tutorial-dots span {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #444;
+    transition: background 0.2s;
+}
+#tutorial-dots span.active { background: #00ddff; }
+#tutorial-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+}
+.tutorial-arrow {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: 2px solid #555;
+    background: rgba(255,255,255,0.08);
+    color: #ccc;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s;
+}
+.tutorial-arrow:active { background: rgba(255,255,255,0.2); }
+.tutorial-arrow.hidden { visibility: hidden; }
+#tutorial-page-num { color: #888; font-size: 13px; min-width: 40px; text-align: center; }
+#tutorial-start-btn {
+    padding: 12px 32px;
+    font-size: 18px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #4a4, #3a3);
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+    letter-spacing: 2px;
+    -webkit-tap-highlight-color: transparent;
+}
+</style>
+</head>
+<body>
+<div id="game-container">
+    <div id="canvas-wrapper">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+    <div id="info-bar">
+        <span class="gold">💰 <span id="gold-val">250</span></span>
+        <span class="wave">Wave <span id="wave-val">1</span>/20</span>
+        <span class="lives">❤️ <span id="lives-val">20</span></span>
+    </div>
+    <div id="planning-panel">
+        <button class="tower-btn" data-tower="0"><span class="icon">▣</span><span class="cost">50💰</span>方块</button>
+        <button class="tower-btn" data-tower="1"><span class="icon">●</span><span class="cost">80💰</span>快速</button>
+        <button class="tower-btn" data-tower="2"><span class="icon">▲</span><span class="cost">120💰</span>溅射</button>
+        <button id="sell-btn" class="tower-btn"><span class="icon">💰</span>出售</button>
+    </div>
+    <button id="start-btn">▶ 开始波次</button>
+    <div id="playing-panel">
+        <div class="dpad-row">
+            <button class="dpad-btn" data-dir="up">▲</button>
+        </div>
+        <div class="dpad-row">
+            <button class="dpad-btn" data-dir="left">◄</button>
+            <button class="dpad-btn" data-dir="down">▼</button>
+            <button class="dpad-btn" data-dir="right">►</button>
+        </div>
+    </div>
+</div>
+<div id="tutorial-overlay">
+    <div id="tutorial-card">
+        <h2 id="tutorial-title">玩法说明</h2>
+        <div id="tutorial-content"></div>
+        <div id="tutorial-dots"></div>
+        <div id="tutorial-nav">
+            <button id="tutorial-prev" class="tutorial-arrow">◀</button>
+            <span id="tutorial-page-num">1 / 4</span>
+            <button id="tutorial-next" class="tutorial-arrow">▶</button>
+            <button id="tutorial-start-btn" style="display:none;">开始游戏</button>
+        </div>
+    </div>
+</div>
+<div id="game-over-overlay">
+    <h2 id="go-title"></h2>
+    <p id="go-msg"></p>
+    <button id="go-restart">🔄 重新开始</button>
+</div>
+<script>
+// ========== SECTION 1: CONSTANTS ==========
+const GRID_COLS = 12;
+const GRID_ROWS = 16;
+const TOWER_DEFS = [
+    { name: '方块塔', shape: 'square', color: '#4488ff', darkColor: '#2266cc', cost: 50, damage: 25, range: 3.0, fireRate: 1.0, projSpeed: 8, splash: false },
+    { name: '快速塔', shape: 'circle', color: '#44ff44', darkColor: '#22cc22', cost: 80, damage: 10, range: 3.5, fireRate: 2.5, projSpeed: 12, splash: false },
+    { name: '溅射塔', shape: 'triangle', color: '#ff4444', darkColor: '#cc2222', cost: 120, damage: 45, range: 2.5, fireRate: 0.6, projSpeed: 6, splash: true, splashRadius: 1.5 },
+];
+const ENEMY_DEFS = [
+    { name: '侦察兵', shape: 'circle', color: '#ff4444', hp: 40, speed: 3.0, reward: 15, leakLives: 1, size: 0.4 },
+    { name: '士兵',   shape: 'square', color: '#ff8844', hp: 100, speed: 1.8, reward: 30, leakLives: 2, size: 0.5 },
+    { name: '坦克',   shape: 'pentagon', color: '#aa44ff', hp: 250, speed: 1.2, reward: 80, leakLives: 5, size: 0.6 },
+    { name: 'Boss',    shape: 'hexagon', color: '#ffcc00', hp: 600, speed: 0.8, reward: 250, leakLives: 10, size: 0.8 },
+];
+const WAVES = [
+    [0,0,0,0,0,0,0,0],  // wave 1: 8 scouts
+    [0,0,0,0,0,0,0,0,0,0,0,0],  // 2: 12 scouts
+    [0,0,0,0,0,0,1,1,1,1],  // 3: 6 scouts + 4 soldiers
+    [1,1,1,1,1,0,0,0,0,0,0,0],  // 4: 5 soldiers + 7 scouts
+    [2],  // 5: 1 tank
+    [1,1,1,1,1,1,1,1,1,1],  // 6: 10 soldiers
+    [0,0,0,0,0,0,0,1,1,1,1,1,1,1],  // 7: 7 scouts + 7 soldiers
+    [2,2,2],  // 8: 3 tanks
+    [0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,2,2],  // 9: 12 scouts + 5 soldiers + 2 tanks
+    [3],  // 10: boss
+    [1,1,1,1,1,1,1,2,2,2,2],  // 11: 7 soldiers + 4 tanks
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],  // 12: 18 scouts (rush)
+    [0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,2,2,2],  // 13: 10 scouts + 7 soldiers + 3 tanks
+    [2,2,2,2,2],  // 14: 5 tanks
+    [3,0,0,0,0,0,0,0,0,0],  // 15: boss + 9 scouts
+    [1,1,1,1,1,1,1,1,2,2,2,2,2],  // 16: 8 soldiers + 5 tanks
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],  // 17: 25 scouts (mass rush)
+    [2,2,2,2,3],  // 18: 4 tanks + boss
+    [0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,2,2,2,3],  // 19: 10 scouts + 8 soldiers + 3 tanks + boss
+    [3,3],  // 20: 2 bosses
+];
+const STARTING_GOLD = 300;
+const STARTING_LIVES = 15;
+const SPAWN_INTERVAL = 0.6; // seconds between enemy spawns
+
+// Path waypoints: enemies follow these in order (match path segments above)
+const WAYPOINTS = [
+    { col: 5.5, row: 0 },     // 0: entrance center
+    { col: 7.5, row: 1 },     // 1: right edge
+    { col: 7.5, row: 2 },     // 2: right edge before turn
+    { col: 2.5, row: 2 },     // 3: left turn zone
+    { col: 2.5, row: 3 },     // 4: left edge
+    { col: 6.5, row: 4 },     // 5: mid-right corridor
+    { col: 10.5, row: 5 },    // 6: right edge
+    { col: 0.5, row: 5 },     // 7: bridge to left side
+    { col: 0.5, row: 7 },     // 8: left edge bottom
+    { col: 5.5, row: 8 },     // 9: center of wide corridor
+    { col: 10.5, row: 10 },   // 10: right edge
+    { col: 0.5, row: 10 },    // 11: bridge to left side
+    { col: 0.5, row: 11 },    // 12: left edge
+    { col: 5.5, row: 12 },    // 13: center corridor
+    { col: 7.5, row: 13 },    // 14: narrow point
+    { col: 5.5, row: 14 },    // 15: widened area
+    { col: 5.5, row: 15 },    // 16: exit
+];
+
+// Path grid data: 0=grass, 1=path, 2=buildable
+function buildGrid() {
+    const grid = [];
+    for (let row = 0; row < GRID_ROWS; row++) {
+        grid[row] = new Array(GRID_COLS).fill(0);
+    }
+    // Mark path cells as rectangular segments (all must connect continuously)
+    const pathSegments = [
+        { c1:4, r1:0, c2:7,  r2:0 },    // Row 0: entrance (cols 4-7)
+        { c1:7, r1:0, c2:8,  r2:1 },    // Row 0-1: right edge (cols 7-8)
+        { c1:7, r1:1, c2:8,  r2:2 },    // Row 1-2: right edge continue
+        { c1:2, r1:2, c2:8,  r2:2 },    // Row 2: turn zone (extends left cols 2-8)
+        { c1:2, r1:2, c2:3,  r2:3 },    // Row 2-3: left edge (cols 2-3)
+        { c1:2, r1:3, c2:11, r2:4 },    // Row 3-4: go right (cols 2-11)
+        { c1:10, r1:4, c2:11, r2:5 },   // Row 4-5: right edge (cols 10-11)
+        { c1:0, r1:5, c2:11, r2:5 },    // Row 5: bridge right to left (cols 0-11)
+        { c1:0, r1:6, c2:1,  r2:7 },    // Row 6-7: left edge go down (cols 0-1)
+        { c1:0, r1:7, c2:11, r2:8 },    // Row 7-8: wide corridor right (cols 0-11)
+        { c1:10, r1:8, c2:11, r2:10 },  // Row 8-10: right edge (cols 10-11)
+        { c1:0, r1:10, c2:11, r2:10 },  // Row 10: bridge right to left (cols 0-11)
+        { c1:0, r1:11, c2:3,  r2:11 },  // Row 11: left area (cols 0-3)
+        { c1:2, r1:12, c2:9,  r2:12 },  // Row 12: corridor (cols 2-9)
+        { c1:7, r1:13, c2:8,  r2:13 },  // Row 13: narrow (cols 7-8)
+        { c1:4, r1:14, c2:7,  r2:14 },  // Row 14: widen (cols 4-7)
+        { c1:5, r1:15, c2:6,  r2:15 },  // Row 15: exit (cols 5-6)
+    ];
+    for (const seg of pathSegments) {
+        for (let c = seg.c1; c <= seg.c2; c++) {
+            for (let r = seg.r1; r <= seg.r2; r++) {
+                if (c >= 0 && c < GRID_COLS && r >= 0 && r < GRID_ROWS) {
+                    grid[r][c] = 1;
+                }
+            }
+        }
+    }
+    // Mark buildable cells (adjacent to path but not path)
+    for (let row = 0; row < GRID_ROWS; row++) {
+        for (let col = 0; col < GRID_COLS; col++) {
+            if (grid[row][col] === 0) {
+                let adj = false;
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        const nr = row + dr, nc = col + dc;
+                        if (nr >= 0 && nr < GRID_ROWS && nc >= 0 && nc < GRID_COLS) {
+                            if (grid[nr][nc] === 1) { adj = true; }
+                        }
+                    }
+                }
+                if (adj) grid[row][col] = 2;
+            }
+        }
+    }
+    return grid;
+}
+
+// ========== SECTION 2: GAME STATE ==========
+let gameState = 'PLANNING'; // PLANNING | PLAYING | GAME_OVER
+let gold = STARTING_GOLD;
+let lives = STARTING_LIVES;
+let currentWave = 1;
+let towers = [];
+let enemies = [];
+let projectiles = [];
+let effects = []; // visual effects
+let player = { col: 5.5, row: 12, hp: 60, maxHp: 60, attackCooldown: 0, attackRange: 1.2, damage: 10, attackRate: 0.8, speed: 2.5 };
+let selectedTowerType = null;
+let sellMode = false;
+let inputState = { up: false, down: false, left: false, right: false };
+let spawnQueue = [];
+let spawnTimer = 0;
+let grid = [];
+let cellSize = 0;
+let canvasOffsetX = 0;
+let canvasOffsetY = 0;
+
+// ========== SECTION 3: DOM REFS ==========
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const goldVal = document.getElementById('gold-val');
+const waveVal = document.getElementById('wave-val');
+const livesVal = document.getElementById('lives-val');
+const planningPanel = document.getElementById('planning-panel');
+const playingPanel = document.getElementById('playing-panel');
+const startBtn = document.getElementById('start-btn');
+const sellBtn = document.getElementById('sell-btn');
+const gameOverOverlay = document.getElementById('game-over-overlay');
+const goTitle = document.getElementById('go-title');
+const goMsg = document.getElementById('go-msg');
+
+// ========== SECTION 4: INITIALIZATION ==========
+function init() {
+    grid = buildGrid();
+    resizeCanvas();
+    gold = STARTING_GOLD;
+    lives = STARTING_LIVES;
+    currentWave = 1;
+    towers = [];
+    enemies = [];
+    projectiles = [];
+    effects = [];
+    spawnQueue = [];
+    spawnTimer = 0;
+    gameState = 'PLANNING';
+    selectedTowerType = null;
+    sellMode = false;
+    inputState = { up: false, down: false, left: false, right: false };
+    player = { col: 5.5, row: 12, hp: 60, maxHp: 60, attackCooldown: 0, attackRange: 1.2, damage: 10, attackRate: 0.8, speed: 2.5 };
+    updateUI();
+    document.querySelectorAll('.tower-btn[data-tower]').forEach(b => b.classList.remove('selected'));
+    sellBtn.classList.remove('selected');
+    gameOverOverlay.style.display = 'none';
+}
+function resizeCanvas() {
+    const wrapper = document.getElementById('canvas-wrapper');
+    const w = wrapper.clientWidth;
+    const h = wrapper.clientHeight;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+    cellSize = Math.floor(Math.min(w / GRID_COLS, h / GRID_ROWS));
+    canvasOffsetX = Math.floor((w - cellSize * GRID_COLS) / 2);
+    canvasOffsetY = Math.floor((h - cellSize * GRID_ROWS) / 2);
+}
+
+window.addEventListener('resize', resizeCanvas);
+
+// ========== SECTION 5: GAME LOOP ==========
+let lastTime = 0;
+function gameLoop(timestamp) {
+    if (!lastTime) lastTime = timestamp;
+    let dt = (timestamp - lastTime) / 1000;
+    if (dt > 0.1) dt = 0.1;
+    if (dt <= 0) dt = 0.016;
+    lastTime = timestamp;
+
+    if (gameState === 'PLAYING') {
+        updateSpawn(dt);
+        updateEnemies(dt);
+        updateTowers(dt);
+        updateProjectiles(dt);
+        updatePlayer(dt);
+        updateEffects(dt);
+        checkWaveComplete();
+    } else if (gameState === 'PLANNING') {
+        updateTowerIdleAnim(dt);
+    }
+
+    render();
+    requestAnimationFrame(gameLoop);
+}
+
+// ========== SECTION 6: UPDATE FUNCTIONS ==========
+function updateSpawn(dt) {
+    if (spawnQueue.length === 0) return;
+    spawnTimer += dt;
+    while (spawnTimer >= SPAWN_INTERVAL && spawnQueue.length > 0) {
+        spawnTimer -= SPAWN_INTERVAL;
+        const typeIdx = spawnQueue.shift();
+        const def = ENEMY_DEFS[typeIdx];
+        enemies.push({
+            type: typeIdx,
+            col: WAYPOINTS[0].col,
+            row: WAYPOINTS[0].row,
+            wpIdx: 1,
+            progress: 0,
+            hp: def.hp,
+            maxHp: def.hp,
+            speed: def.speed,
+            reward: def.reward,
+            leakLives: def.leakLives,
+            size: def.size,
+            blocked: false,
+            blockedTimer: 0,
+        });
+    }
+}
+function updateEnemies(dt) {
+    for (const e of enemies) {
+        e.blockedTimer = Math.max(0, e.blockedTimer - dt);
+        if (e.blockedTimer > 0) continue;
+        if (e.wpIdx >= WAYPOINTS.length) continue;
+        const target = WAYPOINTS[e.wpIdx];
+        const dx = target.col - e.col;
+        const dy = target.row - e.row;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const moveDist = e.speed * dt;
+        if (moveDist >= dist) {
+            e.col = target.col;
+            e.row = target.row;
+            e.wpIdx++;
+            const rem = moveDist - dist;
+            if (e.wpIdx < WAYPOINTS.length && rem > 0) {
+                const next = WAYPOINTS[e.wpIdx];
+                const ndx = next.col - target.col;
+                const ndy = next.row - target.row;
+                const ndist = Math.sqrt(ndx * ndx + ndy * ndy);
+                if (ndist > 0) {
+                    e.col += (ndx / ndist) * rem;
+                    e.row += (ndy / ndist) * rem;
+                }
+            }
+        } else {
+            e.col += (dx / dist) * moveDist;
+            e.row += (dy / dist) * moveDist;
+        }
+    }
+}
+function updateTowers(dt) {
+    for (const t of towers) {
+        t.cooldown = Math.max(0, t.cooldown - dt);
+        if (t.cooldown > 0) continue;
+        // Find best target (furthest along path)
+        let best = null;
+        let bestProgress = -1;
+        for (const e of enemies) {
+            if (e.hp <= 0) continue;
+            const dx = e.col - t.col;
+            const dy = e.row - t.row;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist <= t.range) {
+                const prog = e.wpIdx + e.progress / (e.speed || 1);
+                if (prog > bestProgress) {
+                    bestProgress = prog;
+                    best = e;
+                }
+            }
+        }
+        if (best) {
+            const def = TOWER_DEFS[t.type];
+            projectiles.push({
+                col: t.col,
+                row: t.row,
+                target: best,
+                damage: def.damage,
+                speed: def.projSpeed,
+                splash: def.splash,
+                splashRadius: def.splashRadius || 0,
+                color: def.color,
+            });
+            t.cooldown = 1 / def.fireRate;
+        }
+    }
+}
+function updateProjectiles(dt) {
+    for (const p of projectiles) {
+        if (!p.target || p.target.hp <= 0) {
+            p.dead = true;
+            continue;
+        }
+        const dx = p.target.col - p.col;
+        const dy = p.target.row - p.row;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const moveDist = p.speed * dt;
+        if (moveDist >= dist) {
+            // Hit
+            if (p.splash) {
+                for (const e of enemies) {
+                    if (e.hp <= 0) continue;
+                    const edx = e.col - p.target.col;
+                    const edy = e.row - p.target.row;
+                    if (Math.sqrt(edx*edx + edy*edy) <= p.splashRadius) {
+                        e.hp -= p.damage;
+                    }
+                }
+                effects.push({ col: p.target.col, row: p.target.row, type: 'splash', timer: 0.3, maxTimer: 0.3, radius: p.splashRadius });
+            } else {
+                p.target.hp -= p.damage;
+                effects.push({ col: p.target.col, row: p.target.row, type: 'hit', timer: 0.15, maxTimer: 0.15 });
+            }
+            p.dead = true;
+        } else {
+            p.col += (dx / dist) * moveDist;
+            p.row += (dy / dist) * moveDist;
+        }
+    }
+    projectiles = projectiles.filter(p => !p.dead);
+}
+function updatePlayer(dt) {
+    let dx = 0, dy = 0;
+    if (inputState.up) dy = -1;
+    if (inputState.down) dy = 1;
+    if (inputState.left) dx = -1;
+    if (inputState.right) dx = 1;
+    if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
+    if (dx !== 0 || dy !== 0) {
+        player.col += dx * player.speed * dt;
+        player.row += dy * player.speed * dt;
+        player.col = Math.max(0.4, Math.min(GRID_COLS - 0.4, player.col));
+        player.row = Math.max(0.4, Math.min(GRID_ROWS - 0.4, player.row));
+        // Block enemies: if player touches enemy, block it
+        for (const e of enemies) {
+            if (e.hp <= 0 || e.blockedTimer > 0) continue;
+            const px = player.col, py = player.row;
+            const edx = e.col - px;
+            const edy = e.row - py;
+            const edist = Math.sqrt(edx*edx + edy*edy);
+            if (edist < e.size + 0.4) {
+                e.blocked = true;
+                e.blockedTimer = 0.8;
+                effects.push({ col: e.col, row: e.row, type: 'block', timer: 0.3, maxTimer: 0.3 });
+            }
+        }
+    }
+    // Player auto-attack
+    player.attackCooldown = Math.max(0, player.attackCooldown - dt);
+    if (player.attackCooldown <= 0) {
+        let nearest = null;
+        let nearestDist = Infinity;
+        for (const e of enemies) {
+            if (e.hp <= 0) continue;
+            const edx = e.col - player.col;
+            const edy = e.row - player.row;
+            const edist = Math.sqrt(edx*edx + edy*edy);
+            if (edist <= player.attackRange && edist < nearestDist) {
+                nearestDist = edist;
+                nearest = e;
+            }
+        }
+        if (nearest) {
+            nearest.hp -= player.damage;
+            player.attackCooldown = 1 / player.attackRate;
+            effects.push({ col: player.col, row: player.row, type: 'playerHit', timer: 0.2, maxTimer: 0.2 });
+        }
+    }
+    // Enemies that reach goal and touch player deal damage
+    for (const e of enemies) {
+        if (e.hp <= 0) continue;
+        const px = player.col, py = player.row;
+        const edx = e.col - px;
+        const edy = e.row - py;
+        const edist = Math.sqrt(edx*edx + edy*edy);
+        if (edist < e.size + 0.4 && e.blockedTimer <= 0) {
+            player.hp -= 5 * dt; // contact damage
+        }
+    }
+    if (player.hp <= 0) {
+        player.hp = 0;
+        gameState = 'GAME_OVER';
+        showGameOver(false);
+    }
+}
+function updateEffects(dt) {
+    for (const ef of effects) {
+        ef.timer -= dt;
+        if (ef.timer <= 0) ef.dead = true;
+    }
+    effects = effects.filter(e => !e.dead);
+}
+let towerAnimTime = 0;
+function updateTowerIdleAnim(dt) {
+    towerAnimTime += dt;
+}
+function checkWaveComplete() {
+    // Don't process wave transitions if game is over
+    if (gameState !== 'PLAYING') return;
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        if (enemies[i].hp <= 0) {
+            gold += enemies[i].reward;
+            effects.push({ col: enemies[i].col, row: enemies[i].row, type: 'gold', timer: 0.6, maxTimer: 0.6, amount: enemies[i].reward });
+            enemies.splice(i, 1);
+        }
+    }
+    // Check enemies at goal
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        if (enemies[i].wpIdx >= WAYPOINTS.length) {
+            lives -= enemies[i].leakLives;
+            effects.push({ col: enemies[i].col, row: enemies[i].row, type: 'leak', timer: 0.8, maxTimer: 0.8 });
+            enemies.splice(i, 1);
+        }
+    }
+    // Check if wave complete
+    if (enemies.length === 0 && spawnQueue.length === 0) {
+        const bonus = 50 + currentWave * 5;
+        gold += bonus;
+        currentWave++;
+        if (currentWave > 20) {
+            gameState = 'GAME_OVER';
+            showGameOver(true);
+            return;
+        }
+        gameState = 'PLANNING';
+        updateUI();
+    }
+    // Check lives
+    if (lives <= 0) {
+        lives = 0;
+        gameState = 'GAME_OVER';
+        showGameOver(false);
+    }
+    updateUI();
+}
+
+function showGameOver(victory) {
+    gameOverOverlay.style.display = 'flex';
+    if (victory) {
+        goTitle.className = 'victory';
+        goTitle.textContent = '🎉 胜利！';
+        goMsg.textContent = '你成功防守了所有20波敌人！得分: ' + gold;
+    } else {
+        goTitle.className = 'defeat';
+        goTitle.textContent = '游戏结束';
+        goMsg.textContent = '坚持到了第 ' + currentWave + ' 波。得分: ' + gold;
+    }
+}
+
+// ========== SECTION 7: RENDER FUNCTIONS ==========
+function toPixelX(col) { return canvasOffsetX + col * cellSize; }
+function toPixelY(row) { return canvasOffsetY + row * cellSize; }
+
+function render() {
+    if (cellSize <= 0) return;
+    const w = canvas.width / (window.devicePixelRatio || 1);
+    const h = canvas.height / (window.devicePixelRatio || 1);
+    ctx.clearRect(0, 0, w, h);
+
+    renderGrid();
+    if (gameState === 'PLANNING') renderPlacementPreview();
+    renderTowers();
+    renderEnemies();
+    renderProjectiles();
+    renderPlayer();
+    renderEffects();
+    if (gameState === 'PLANNING') renderTowerRanges();
+}
+
+function renderGrid() {
+    for (let row = 0; row < GRID_ROWS; row++) {
+        for (let col = 0; col < GRID_COLS; col++) {
+            const x = toPixelX(col), y = toPixelY(row);
+            if (grid[row][col] === 0) {
+                ctx.fillStyle = '#1a3a1a';
+            } else if (grid[row][col] === 1) {
+                ctx.fillStyle = '#c4a45a';
+            } else {
+                ctx.fillStyle = '#223322';
+            }
+            ctx.fillRect(x, y, cellSize, cellSize);
+            // Grid lines
+            ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+            ctx.lineWidth = 0.5;
+            ctx.strokeRect(x, y, cellSize, cellSize);
+        }
+    }
+    // Buildable cell highlight
+    for (let row = 0; row < GRID_ROWS; row++) {
+        for (let col = 0; col < GRID_COLS; col++) {
+            if (grid[row][col] === 2) {
+                const x = toPixelX(col), y = toPixelY(row);
+                ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([3, 3]);
+                ctx.strokeRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
+                ctx.setLineDash([]);
+            }
+        }
+    }
+    // Spawn marker
+    const sx = toPixelX(WAYPOINTS[0].col) - 10;
+    const sy = toPixelY(WAYPOINTS[0].row) - 10;
+    ctx.fillStyle = '#ff0';
+    ctx.font = '14px Arial';
+    ctx.fillText('入口', toPixelX(WAYPOINTS[0].col) + 5, toPixelY(WAYPOINTS[0].row) - 8);
+    // Goal marker
+    const last = WAYPOINTS[WAYPOINTS.length - 1];
+    ctx.fillStyle = '#f44';
+    ctx.fillText('基地', toPixelX(last.col) + 5, toPixelY(last.row) - 8);
+}
+
+function renderPlacementPreview() {
+    if (selectedTowerType === null && !sellMode) return;
+    // Just highlight the selected button (handled by CSS)
+}
+
+function renderTowers() {
+    for (const t of towers) {
+        const x = toPixelX(t.col);
+        const y = toPixelY(t.row);
+        const size = cellSize * 0.7;
+        const half = size / 2;
+        const def = TOWER_DEFS[t.type];
+        ctx.save();
+        ctx.translate(x, y);
+        // Glow when selling
+        if (sellMode && gameState === 'PLANNING') {
+            ctx.shadowColor = '#ff4444';
+            ctx.shadowBlur = 12;
+        }
+        drawShape(ctx, def.shape, 0, 0, half, def.color, def.darkColor, 0);
+        ctx.restore();
+    }
+}
+
+function renderTowerRanges() {
+    if (gameState !== 'PLANNING') return;
+    const now = towerAnimTime;
+    for (const t of towers) {
+        const x = toPixelX(t.col);
+        const y = toPixelY(t.row);
+        const r = TOWER_DEFS[t.type].range * cellSize;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.06)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+}
+
+function renderEnemies() {
+    for (const e of enemies) {
+        const x = toPixelX(e.col);
+        const y = toPixelY(e.row);
+        const size = e.size * cellSize;
+        const half = size / 2;
+        const def = ENEMY_DEFS[e.type];
+        // Calculate rotation angle toward next waypoint
+        let angle = 0;
+        if (e.wpIdx < WAYPOINTS.length) {
+            const twp = WAYPOINTS[e.wpIdx];
+            angle = Math.atan2(twp.row - e.row, twp.col - e.col);
+        }
+        ctx.save();
+        ctx.translate(x, y);
+        drawShape(ctx, def.shape, 0, 0, half, def.color, '#222', angle);
+        ctx.restore();
+        // HP bar
+        if (e.hp < e.maxHp) {
+            const bw = cellSize * 1.0;
+            const bx = x - bw / 2;
+            const by = y - size / 2 - 10;
+            const ratio = e.hp / e.maxHp;
+            ctx.fillStyle = '#333';
+            ctx.fillRect(bx, by, bw, 4);
+            ctx.fillStyle = ratio > 0.5 ? '#4f4' : ratio > 0.25 ? '#ff0' : '#f44';
+            ctx.fillRect(bx, by, bw * ratio, 4);
+        }
+        // Blocked indicator
+        if (e.blockedTimer > 0) {
+            ctx.strokeStyle = '#0ff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(x, y, size / 2 + 4, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+    }
+}
+
+function renderProjectiles() {
+    for (const p of projectiles) {
+        const x = toPixelX(p.col);
+        const y = toPixelY(p.row);
+        const size = cellSize * 0.12;
+        ctx.fillStyle = p.color;
+        if (p.splash) {
+            ctx.beginPath();
+            ctx.moveTo(x, y - size);
+            ctx.lineTo(x + size, y + size * 0.5);
+            ctx.lineTo(x - size, y + size * 0.5);
+            ctx.closePath();
+            ctx.fill();
+        } else {
+            ctx.fillRect(x - size/2, y - size/2, size, size);
+        }
+    }
+}
+
+function renderPlayer() {
+    const x = toPixelX(player.col);
+    const y = toPixelY(player.row);
+    const size = cellSize * 0.7;
+    const half = size / 2;
+    // Range indicator
+    ctx.beginPath();
+    ctx.arc(x, y, player.attackRange * cellSize, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,255,255,0.06)';
+    ctx.fill();
+    // Body
+    drawShape(ctx, 'circle', x, y, half, '#00ddff', '#0088aa', 0);
+    // HP bar above player
+    const bw = cellSize * 1.2;
+    const bx = x - bw / 2;
+    const by = y - half - 16;
+    const ratio = player.hp / player.maxHp;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(bx, by, bw, 5);
+    ctx.fillStyle = ratio > 0.5 ? '#4f4' : ratio > 0.25 ? '#ff0' : '#f44';
+    ctx.fillRect(bx, by, bw * ratio, 5);
+}
+
+function renderEffects() {
+    for (const ef of effects) {
+        const x = toPixelX(ef.col);
+        const y = toPixelY(ef.row);
+        const t = ef.timer / ef.maxTimer;
+        if (ef.type === 'splash') {
+            const r = ef.radius * cellSize * (1 - t * 0.5);
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(255,100,50,${t})`;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        } else if (ef.type === 'hit') {
+            ctx.fillStyle = `rgba(255,255,255,${t})`;
+            ctx.font = `${Math.floor(14 + t * 8)}px Arial`;
+            ctx.fillText('✦', x - 10, y - 10);
+        } else if (ef.type === 'playerHit') {
+            ctx.strokeStyle = `rgba(0,255,255,${t})`;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(x, y, cellSize * 0.6 * (2 - t), 0, Math.PI * 2);
+            ctx.stroke();
+        } else if (ef.type === 'block') {
+            ctx.strokeStyle = `rgba(0,255,255,${t})`;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.arc(x, y, cellSize * 0.5, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        } else if (ef.type === 'gold') {
+            ctx.fillStyle = `rgba(255,215,0,${t})`;
+            ctx.font = `${Math.floor(14 + t * 6)}px Arial`;
+            ctx.fillText('+' + ef.amount + '💰', x - 18, y - 20 - t * 15);
+        } else if (ef.type === 'leak') {
+            ctx.fillStyle = `rgba(255,0,0,${t})`;
+            ctx.font = `${Math.floor(16 + t * 8)}px Arial`;
+            ctx.fillText('💔', x - 10, y - 5 - t * 10);
+        }
+    }
+}
+
+// ========== SECTION 8: SHAPE DRAWING ==========
+function drawShape(ctx, shape, x, y, half, fillColor, strokeColor, rotation) {
+    ctx.fillStyle = fillColor;
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+
+    if (shape === 'circle') {
+        ctx.beginPath();
+        ctx.arc(x, y, half, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+    } else {
+        ctx.save();
+        ctx.translate(x, y);
+        if (rotation) ctx.rotate(rotation);
+        ctx.beginPath();
+        if (shape === 'square') {
+            ctx.rect(-half, -half, half * 2, half * 2);
+        } else if (shape === 'triangle') {
+            ctx.moveTo(0, -half);
+            ctx.lineTo(half * 0.866, half * 0.5);
+            ctx.lineTo(-half * 0.866, half * 0.5);
+            ctx.closePath();
+        } else if (shape === 'pentagon') {
+            for (let i = 0; i < 5; i++) {
+                const a = (i * 2 * Math.PI / 5) - Math.PI / 2;
+                const px = Math.cos(a) * half;
+                const py = Math.sin(a) * half;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+        } else if (shape === 'hexagon') {
+            for (let i = 0; i < 6; i++) {
+                const a = (i * 2 * Math.PI / 6) - Math.PI / 2;
+                const px = Math.cos(a) * half;
+                const py = Math.sin(a) * half;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+        }
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+    }
+}
+
+// ========== SECTION 9: INPUT HANDLING ==========
+canvas.addEventListener('click', (e) => {
+    if (gameState !== 'PLANNING') return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left - canvasOffsetX;
+    const y = e.clientY - rect.top - canvasOffsetY;
+    const col = x / cellSize;
+    const row = y / cellSize;
+    // Round to nearest cell center
+    const cc = Math.round(col);
+    const cr = Math.round(row);
+    if (cc < 0 || cc >= GRID_COLS || cr < 0 || cr >= GRID_ROWS) return;
+
+    if (sellMode) {
+        sellTowerAt(cc, cr);
+    } else if (selectedTowerType !== null) {
+        placeTower(selectedTowerType, cc, cr);
+    }
+});
+
+// Tower selection buttons
+document.querySelectorAll('.tower-btn[data-tower]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        if (gameState === 'PLAYING') return;
+        const type = parseInt(btn.dataset.tower);
+        if (selectedTowerType === type) {
+            selectedTowerType = null;
+            btn.classList.remove('selected');
+        } else {
+            document.querySelectorAll('.tower-btn[data-tower]').forEach(b => b.classList.remove('selected'));
+            sellBtn.classList.remove('selected');
+            sellMode = false;
+            selectedTowerType = type;
+            btn.classList.add('selected');
+        }
+    });
+});
+
+// Sell button
+sellBtn.addEventListener('click', () => {
+    if (gameState === 'PLAYING') return;
+    sellMode = !sellMode;
+    if (sellMode) {
+        sellBtn.classList.add('selected');
+        selectedTowerType = null;
+        document.querySelectorAll('.tower-btn[data-tower]').forEach(b => b.classList.remove('selected'));
+    } else {
+        sellBtn.classList.remove('selected');
+    }
+});
+
+// Start button
+startBtn.addEventListener('click', () => {
+    if (gameState !== 'PLANNING') return;
+    spawnQueue = [...WAVES[currentWave - 1]];
+    spawnTimer = 0;
+    gameState = 'PLAYING';
+    updateUI();
+});
+
+// D-pad
+const dpadBtns = document.querySelectorAll('.dpad-btn');
+dpadBtns.forEach(btn => {
+    const dir = btn.dataset.dir;
+    btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        inputState[dir] = true;
+        btn.classList.add('active');
+    });
+    btn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        inputState[dir] = false;
+        btn.classList.remove('active');
+    });
+    btn.addEventListener('touchcancel', (e) => {
+        inputState[dir] = false;
+        btn.classList.remove('active');
+    });
+    // Also handle mouse for desktop testing
+    btn.addEventListener('mousedown', (e) => {
+        inputState[dir] = true;
+        btn.classList.add('active');
+    });
+    btn.addEventListener('mouseup', (e) => {
+        inputState[dir] = false;
+        btn.classList.remove('active');
+    });
+    btn.addEventListener('mouseleave', (e) => {
+        inputState[dir] = false;
+        btn.classList.remove('active');
+    });
+});
+
+// Keyboard controls for desktop testing
+window.addEventListener('keydown', (e) => {
+    if (gameState !== 'PLAYING') return;
+    switch(e.key) {
+        case 'ArrowUp': case 'w': case 'W': inputState.up = true; e.preventDefault(); break;
+        case 'ArrowDown': case 's': case 'S': inputState.down = true; e.preventDefault(); break;
+        case 'ArrowLeft': case 'a': case 'A': inputState.left = true; e.preventDefault(); break;
+        case 'ArrowRight': case 'd': case 'D': inputState.right = true; e.preventDefault(); break;
+    }
+});
+window.addEventListener('keyup', (e) => {
+    switch(e.key) {
+        case 'ArrowUp': case 'w': case 'W': inputState.up = false; break;
+        case 'ArrowDown': case 's': case 'S': inputState.down = false; break;
+        case 'ArrowLeft': case 'a': case 'A': inputState.left = false; break;
+        case 'ArrowRight': case 'd': case 'D': inputState.right = false; break;
+    }
+});
+
+// Restart button
+document.getElementById('go-restart').addEventListener('click', () => {
+    init();
+    lastTime = 0;
+});
+
+// ========== SECTION 10: GAME LOGIC ==========
+function placeTower(type, col, row) {
+    const def = TOWER_DEFS[type];
+    if (gold < def.cost) return;
+    if (grid[row][col] !== 2) return;
+    // Check no tower already there
+    for (const t of towers) {
+        if (t.col === col && t.row === row) return;
+    }
+    gold -= def.cost;
+    towers.push({ type: type, col: col, row: row, cooldown: 0, range: def.range });
+    updateUI();
+}
+
+function sellTowerAt(col, row) {
+    for (let i = 0; i < towers.length; i++) {
+        if (towers[i].col === col && towers[i].row === row) {
+            gold += Math.floor(TOWER_DEFS[towers[i].type].cost * 0.7);
+            towers.splice(i, 1);
+            updateUI();
+            return;
+        }
+    }
+}
+
+// ========== SECTION 11: UI UPDATE ==========
+function updateUI() {
+    goldVal.textContent = gold;
+    waveVal.textContent = currentWave;
+    livesVal.textContent = lives;
+    if (gameState === 'PLANNING') {
+        planningPanel.style.display = 'flex';
+        playingPanel.style.display = 'none';
+        startBtn.style.display = 'block';
+    } else if (gameState === 'PLAYING') {
+        planningPanel.style.display = 'none';
+        playingPanel.style.display = 'flex';
+        startBtn.style.display = 'none';
+    } else {
+        planningPanel.style.display = 'none';
+        playingPanel.style.display = 'none';
+        startBtn.style.display = 'none';
+    }
+}
+
+// ========== SECTION 12: TUTORIAL ==========
+let gameStarted = false;
+let tutorialPage = 0;
+const tutorialPages = [
+    {
+        html: '<p><span class="highlight">共 20 波</span>敌人从<span class="warn">入口</span>出发，沿沙色路径走向<span class="warn">基地</span>。</p>' +
+              '<p>消灭当前波次的所有敌人即可通关本波，进入下一波。</p>' +
+              '<p>每有一个敌人到达基地，会扣除 <span class="warn">生命值</span>。</p>' +
+              '<p>生命归零则<span class="warn">游戏失败</span>，坚持 20 波则<span class="highlight">胜利</span>。</p>',
+    },
+    {
+        html: '<p>用金币在<span class="key">绿色虚线格子</span>上点击放置防御塔。</p>' +
+              '<p><span style="color:#4488ff">▣ 方块塔（50金）</span>— 均衡输出</p>' +
+              '<p><span style="color:#44ff44">● 快速塔（80金）</span>— 高射速</p>' +
+              '<p><span style="color:#ff4444">▲ 溅射塔（120金）</span>— 范围爆炸</p>' +
+              '<p>可按<span class="warn">「出售」</span>点击已放置的塔，返还 70% 金币。</p>' +
+              '<p>布置好后点<span class="highlight">「开始波次」</span>进入战斗。</p>',
+    },
+    {
+        html: '<p>敌人从<span class="warn">入口</span>出发，沿<span class="key">沙色路径</span>走向基地。</p>' +
+              '<p>塔会<span class="key">自动攻击</span>范围内的敌人，优先打距离基地最近的。</p>' +
+              '<p><span class="warn">此阶段不能买塔或卖塔</span>，布阵一旦开始就无法更改。</p>' +
+              '<p>你可以控制<span class="key">角色</span>在战场上移动，协助塔进行防守。</p>',
+    },
+    {
+        html: '<p>用屏幕下方的<span class="key">虚拟方向键</span>控制角色上下左右移动。</p>' +
+              '<p>靠近敌人会自动<span class="highlight">近战攻击</span>（每次 10 点伤害）。</p>' +
+              '<p>碰到敌人可将其<span class="key">阻挡 0.8 秒</span>，是堵路的好手段。</p>' +
+              '<p><span class="warn">注意：</span>敌人也会反伤角色（每秒 5 点），角色仅 60 血，用完即结束。</p>',
+    },
+];
+
+function updateTutorialPage() {
+    const content = document.getElementById('tutorial-content');
+    content.innerHTML = tutorialPages[tutorialPage].html;
+    // Update dots
+    const dots = document.getElementById('tutorial-dots');
+    dots.innerHTML = '';
+    for (let i = 0; i < tutorialPages.length; i++) {
+        const dot = document.createElement('span');
+        if (i === tutorialPage) dot.className = 'active';
+        dots.appendChild(dot);
+    }
+    // Update page number
+    document.getElementById('tutorial-page-num').textContent = (tutorialPage + 1) + ' / ' + tutorialPages.length;
+    // Update arrows
+    const prevBtn = document.getElementById('tutorial-prev');
+    const nextBtn = document.getElementById('tutorial-next');
+    const startBtn = document.getElementById('tutorial-start-btn');
+    if (tutorialPage === 0) {
+        prevBtn.classList.add('hidden');
+    } else {
+        prevBtn.classList.remove('hidden');
+    }
+    if (tutorialPage === tutorialPages.length - 1) {
+        nextBtn.classList.add('hidden');
+        startBtn.style.display = 'inline-block';
+    } else {
+        nextBtn.classList.remove('hidden');
+        startBtn.style.display = 'none';
+    }
+}
+
+function showTutorial() {
+    tutorialPage = 0;
+    document.getElementById('tutorial-overlay').style.display = 'flex';
+    updateTutorialPage();
+}
+
+function hideTutorial() {
+    document.getElementById('tutorial-overlay').style.display = 'none';
+    gameStarted = true;
+}
+
+document.getElementById('tutorial-prev').addEventListener('click', () => {
+    if (tutorialPage > 0) {
+        tutorialPage--;
+        updateTutorialPage();
+    }
+});
+document.getElementById('tutorial-next').addEventListener('click', () => {
+    if (tutorialPage < tutorialPages.length - 1) {
+        tutorialPage++;
+        updateTutorialPage();
+    }
+});
+document.getElementById('tutorial-start-btn').addEventListener('click', hideTutorial);
+
+// ========== SECTION 13: START ==========
+// Register service worker for PWA
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+init();
+showTutorial();
+updateUI();
+
+// Override gameLoop to check gameStarted
+const _originalGameLoop = gameLoop;
+gameLoop = function(timestamp) {
+    if (!gameStarted) {
+        requestAnimationFrame(gameLoop);
+        lastTime = timestamp;
+        return;
+    }
+    _originalGameLoop(timestamp);
+};
+
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>

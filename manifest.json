@@ -1,0 +1,11 @@
+{
+  "name": "几何塔防",
+  "short_name": "几何塔防",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a1a",
+  "theme_color": "#0a0a1a",
+  "description": "几何风格塔防游戏",
+  "icons": []
+}
