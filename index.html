@@ -308,15 +308,15 @@ canvas {
 const GRID_COLS = 12;
 const GRID_ROWS = 16;
 const TOWER_DEFS = [
-    { name: '方块塔', shape: 'square', color: '#4488ff', darkColor: '#2266cc', cost: 50, damage: 25, range: 3.0, fireRate: 1.0, projSpeed: 8, splash: false },
-    { name: '快速塔', shape: 'circle', color: '#44ff44', darkColor: '#22cc22', cost: 80, damage: 10, range: 3.5, fireRate: 2.5, projSpeed: 12, splash: false },
-    { name: '溅射塔', shape: 'triangle', color: '#ff4444', darkColor: '#cc2222', cost: 120, damage: 45, range: 2.5, fireRate: 0.6, projSpeed: 6, splash: true, splashRadius: 1.5 },
+    { name: '方块塔', shape: 'square', color: '#4488ff', darkColor: '#2266cc', cost: 50, damage: 12, range: 3.0, fireRate: 1.0, projSpeed: 8, splash: false },
+    { name: '快速塔', shape: 'circle', color: '#44ff44', darkColor: '#22cc22', cost: 80, damage: 5, range: 3.5, fireRate: 2.5, projSpeed: 12, splash: false },
+    { name: '溅射塔', shape: 'triangle', color: '#ff4444', darkColor: '#cc2222', cost: 120, damage: 22, range: 2.5, fireRate: 0.6, projSpeed: 6, splash: true, splashRadius: 1.5 },
 ];
 const ENEMY_DEFS = [
-    { name: '侦察兵', shape: 'circle', color: '#ff4444', hp: 40, speed: 3.0, reward: 15, leakLives: 1, size: 0.4 },
-    { name: '士兵',   shape: 'square', color: '#ff8844', hp: 100, speed: 1.8, reward: 30, leakLives: 2, size: 0.5 },
-    { name: '坦克',   shape: 'pentagon', color: '#aa44ff', hp: 250, speed: 1.2, reward: 80, leakLives: 5, size: 0.6 },
-    { name: 'Boss',    shape: 'hexagon', color: '#ffcc00', hp: 600, speed: 0.8, reward: 250, leakLives: 10, size: 0.8 },
+    { name: '侦察兵', shape: 'circle', color: '#ff4444', hp: 120, speed: 3.0, reward: 15, leakLives: 1, size: 0.4 },
+    { name: '士兵',   shape: 'square', color: '#ff8844', hp: 300, speed: 1.8, reward: 30, leakLives: 2, size: 0.5 },
+    { name: '坦克',   shape: 'pentagon', color: '#aa44ff', hp: 750, speed: 1.2, reward: 80, leakLives: 5, size: 0.6 },
+    { name: 'Boss',    shape: 'hexagon', color: '#ffcc00', hp: 1800, speed: 0.8, reward: 250, leakLives: 10, size: 0.8 },
 ];
 const WAVES = [
     [0,0,0,0,0,0,0,0],  // wave 1: 8 scouts
@@ -654,10 +654,24 @@ function updatePlayer(dt) {
     if (inputState.right) dx = 1;
     if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
     if (dx !== 0 || dy !== 0) {
-        player.col += dx * player.speed * dt;
-        player.row += dy * player.speed * dt;
-        player.col = Math.max(0.4, Math.min(GRID_COLS - 0.4, player.col));
-        player.row = Math.max(0.4, Math.min(GRID_ROWS - 0.4, player.row));
+        const oldCol = player.col;
+        const oldRow = player.row;
+        // Try X movement independently (allow sliding along path edges)
+        let newCol = oldCol + dx * player.speed * dt;
+        newCol = Math.max(0.4, Math.min(GRID_COLS - 0.4, newCol));
+        const cellX = Math.floor(newCol);
+        const cellRowX = Math.floor(oldRow);
+        if (cellRowX >= 0 && cellRowX < GRID_ROWS && cellX >= 0 && cellX < GRID_COLS && grid[cellRowX][cellX] === 1) {
+            player.col = newCol;
+        }
+        // Try Y movement independently
+        let newRow = oldRow + dy * player.speed * dt;
+        newRow = Math.max(0.4, Math.min(GRID_ROWS - 0.4, newRow));
+        const cellY = Math.floor(newRow);
+        const cellColY = Math.floor(player.col);
+        if (cellY >= 0 && cellY < GRID_ROWS && cellColY >= 0 && cellColY < GRID_COLS && grid[cellY][cellColY] === 1) {
+            player.row = newRow;
+        }
         // Block enemies: if player touches enemy, block it
         for (const e of enemies) {
             if (e.hp <= 0 || e.blockedTimer > 0) continue;
