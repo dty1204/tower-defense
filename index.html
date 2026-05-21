@@ -965,6 +965,7 @@ function updateSpawn(dt) {
             size: def.size,
             blocked: false,
             blockedTimer: 0,
+            blockCooldown: 0,
             slowTimer: 0,
             bleedTimer: 0,
         });
@@ -988,6 +989,7 @@ function updateEnemies(dt) {
         const effSpeed = e.slowTimer > 0 ? e.origSpeed * 0.5 : e.origSpeed;
 
         e.blockedTimer = Math.max(0, e.blockedTimer - dt);
+        e.blockCooldown = Math.max(0, e.blockCooldown - dt);
         if (e.blockedTimer > 0) continue;
         const wps = e.waypoints || WAYPOINTS;
         if (e.wpIdx >= wps.length) continue;
@@ -1145,18 +1147,19 @@ function updatePlayer(dt) {
         if (cellY >= 0 && cellY < GRID_ROWS && cellColY >= 0 && cellColY < GRID_COLS && grid[cellY][cellColY] === 1) {
             player.row = newRow;
         }
-        // Block enemies: if player touches enemy, block it
-        for (const e of enemies) {
-            if (e.hp <= 0 || e.blockedTimer > 0) continue;
-            const px = player.col, py = player.row;
-            const edx = e.col - px;
-            const edy = e.row - py;
-            const edist = Math.sqrt(edx*edx + edy*edy);
-            if (edist < e.size + 0.4) {
-                e.blocked = true;
-                e.blockedTimer = 0.8;
-                effects.push({ col: e.col, row: e.row, type: 'block', timer: 0.3, maxTimer: 0.3 });
-            }
+    }
+    // Block enemies on contact (runs every frame regardless of movement source)
+    for (const e of enemies) {
+        if (e.hp <= 0 || e.blockedTimer > 0 || e.blockCooldown > 0) continue;
+        const px = player.col, py = player.row;
+        const edx = e.col - px;
+        const edy = e.row - py;
+        const edist = Math.sqrt(edx*edx + edy*edy);
+        if (edist < e.size + 0.4) {
+            e.blocked = true;
+            e.blockedTimer = 0.8;
+            e.blockCooldown = 3.0; // 3s cooldown before same enemy can be blocked again
+            effects.push({ col: e.col, row: e.row, type: 'block', timer: 0.3, maxTimer: 0.3 });
         }
     }
     // Player auto-attack
