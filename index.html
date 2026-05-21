@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
-<title>几何塔防</title>
+<title>几何战争</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body {
@@ -19,7 +19,7 @@ html, body {
     font-family: Arial, sans-serif;
 }
 #game-container {
-    display: flex;
+    display: none;
     flex-direction: column;
     height: 100vh;
     height: 100dvh;
@@ -173,6 +173,7 @@ canvas {
     align-items: center;
     justify-content: center;
     color: #fff;
+    gap: 12px;
 }
 #game-over-overlay h2 { font-size: 36px; margin-bottom: 16px; }
 #game-over-overlay p { font-size: 18px; margin-bottom: 20px; }
@@ -181,104 +182,257 @@ canvas {
     font-size: 18px;
     border: none;
     border-radius: 12px;
-    background: #4488ff;
     color: #fff;
     cursor: pointer;
 }
+#go-restart { background: #4488ff; }
+#go-menu { background: #555; }
 #game-over-overlay .victory { color: #ffd700; }
 #game-over-overlay .defeat { color: #ff4444; }
-
-/* Tutorial overlay */
-#tutorial-overlay {
+/* ====== MAIN MENU ====== */
+#main-menu {
     display: flex;
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.88);
-    z-index: 200;
+    background: linear-gradient(180deg, #0a0a1a 0%, #0d1025 50%, #0a0a1a 100%);
+    z-index: 300;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 48px;
+}
+#main-menu .title {
+    font-size: 44px;
+    font-weight: bold;
+    color: #ffd700;
+    letter-spacing: 6px;
+    text-shadow: 0 0 30px rgba(255,215,0,0.4), 0 0 60px rgba(255,215,0,0.15);
+}
+#main-menu .title-deco {
+    font-size: 20px;
+    color: rgba(255,215,0,0.3);
+    letter-spacing: 8px;
+}
+.menu-buttons {
+    display: flex;
+    gap: 18px;
+}
+.menu-btn {
+    padding: 16px 28px;
+    font-size: 18px;
+    border: 2px solid #4fc3f7;
+    border-radius: 14px;
+    background: rgba(79,195,247,0.08);
+    color: #4fc3f7;
+    cursor: pointer;
+    letter-spacing: 3px;
+    transition: background 0.2s, box-shadow 0.2s;
+    -webkit-tap-highlight-color: transparent;
+}
+.menu-btn:active {
+    background: rgba(79,195,247,0.25);
+    box-shadow: 0 0 16px rgba(79,195,247,0.3);
+}
+
+/* ====== LEVEL SELECT ====== */
+#level-select {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(180deg, #0a0a1a 0%, #0d1025 50%, #0a0a1a 100%);
+    z-index: 310;
+    flex-direction: column;
+    align-items: center;
     padding: 20px;
 }
-#tutorial-card {
-    background: #1a1a2e;
-    border: 2px solid #3a3a5a;
-    border-radius: 16px;
-    padding: 24px 20px 16px;
-    max-width: 380px;
-    width: 100%;
-    text-align: center;
-    color: #ddd;
-}
-#tutorial-title {
-    font-size: 24px;
-    color: #ffd700;
-    margin-bottom: 20px;
-    letter-spacing: 2px;
-}
-#tutorial-content {
-    text-align: left;
-    min-height: 180px;
-    font-size: 14px;
-    line-height: 1.8;
-    color: #ccc;
-    padding: 0 4px;
-}
-#tutorial-content p { margin: 6px 0; }
-#tutorial-content .highlight { color: #ffd700; font-weight: bold; }
-#tutorial-content .key { color: #00ddff; }
-#tutorial-content .warn { color: #ff6666; }
-#tutorial-dots {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin: 14px 0;
-}
-#tutorial-dots span {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    background: #444;
-    transition: background 0.2s;
-}
-#tutorial-dots span.active { background: #00ddff; }
-#tutorial-nav {
+#level-select .ls-header {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 16px;
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: 24px;
 }
-.tutorial-arrow {
+#level-select .ls-back {
     width: 44px; height: 44px;
     border-radius: 50%;
     border: 2px solid #555;
     background: rgba(255,255,255,0.08);
     color: #ccc;
-    font-size: 18px;
+    font-size: 20px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     -webkit-tap-highlight-color: transparent;
-    transition: background 0.15s;
 }
-.tutorial-arrow:active { background: rgba(255,255,255,0.2); }
-.tutorial-arrow.hidden { visibility: hidden; }
-#tutorial-page-num { color: #888; font-size: 13px; min-width: 40px; text-align: center; }
-#tutorial-start-btn {
-    padding: 12px 32px;
-    font-size: 18px;
-    border: none;
-    border-radius: 12px;
-    background: linear-gradient(180deg, #4a4, #3a3);
-    color: #fff;
+#level-select .ls-title {
+    flex: 1;
+    text-align: center;
+    font-size: 26px;
+    color: #ffd700;
+    letter-spacing: 3px;
+    margin-right: 44px;
+}
+#level-select .level-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
+    max-width: 360px;
+    flex: 1;
+    justify-content: center;
+    padding-bottom: 60px;
+}
+.level-btn {
+    width: 100%;
+    height: 56px;
+    border: 2px solid #4fc3f7;
+    border-radius: 14px;
+    background: rgba(79,195,247,0.08);
+    color: #4fc3f7;
+    font-size: 20px;
     font-weight: bold;
+    letter-spacing: 3px;
     cursor: pointer;
-    letter-spacing: 2px;
+    transition: background 0.2s, box-shadow 0.2s;
     -webkit-tap-highlight-color: transparent;
 }
+.level-btn:active {
+    background: rgba(79,195,247,0.25);
+    box-shadow: 0 0 16px rgba(79,195,247,0.3);
+}
+.level-btn.locked {
+    border-color: #444;
+    background: rgba(255,255,255,0.03);
+    color: #555;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* ====== INSTRUCTIONS PAGE ====== */
+#instructions {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(180deg, #0a0a1a 0%, #0d1025 50%, #0a0a1a 100%);
+    z-index: 310;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+}
+#instructions .ins-header {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: 20px;
+}
+#instructions .ins-back {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: 2px solid #555;
+    background: rgba(255,255,255,0.08);
+    color: #ccc;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+}
+#instructions .ins-title {
+    flex: 1;
+    text-align: center;
+    font-size: 26px;
+    color: #ffd700;
+    letter-spacing: 3px;
+    margin-right: 44px;
+}
+#instructions .ins-content {
+    flex: 1;
+    overflow-y: auto;
+    max-width: 400px;
+    width: 100%;
+    font-size: 15px;
+    line-height: 2;
+    color: #ccc;
+    padding: 0 8px 20px;
+}
+#instructions .ins-content h3 {
+    color: #ffd700;
+    font-size: 18px;
+    margin: 16px 0 6px;
+    letter-spacing: 2px;
+}
+#instructions .ins-content p { margin: 4px 0; }
+#instructions .ins-content .hl { color: #ffd700; }
+#instructions .ins-content .key { color: #00ddff; }
+#instructions .ins-content .warn { color: #ff6666; }
 </style>
 </head>
 <body>
+
+<!-- ====== MAIN MENU ====== -->
+<div id="main-menu">
+    <div class="title-deco">⬡ ⬡ ⬡</div>
+    <div class="title">几何战争</div>
+    <div class="menu-buttons">
+        <button class="menu-btn" id="btn-levels">选择关卡</button>
+        <button class="menu-btn" id="btn-howto">游戏说明</button>
+    </div>
+</div>
+
+<!-- ====== LEVEL SELECT ====== -->
+<div id="level-select">
+    <div class="ls-header">
+        <button class="ls-back" id="ls-back-btn">◀</button>
+        <div class="ls-title">选择关卡</div>
+    </div>
+    <div class="level-grid">
+        <button class="level-btn" data-level="1">第 1 关</button>
+        <button class="level-btn locked" data-level="2">第 2 关 🔒</button>
+        <button class="level-btn locked" data-level="3">第 3 关 🔒</button>
+        <button class="level-btn locked" data-level="4">第 4 关 🔒</button>
+        <button class="level-btn locked" data-level="5">第 5 关 🔒</button>
+    </div>
+</div>
+
+<!-- ====== INSTRUCTIONS PAGE ====== -->
+<div id="instructions">
+    <div class="ins-header">
+        <button class="ins-back" id="ins-back-btn">◀</button>
+        <div class="ins-title">游戏说明</div>
+    </div>
+    <div class="ins-content">
+        <h3>一、游戏目标</h3>
+        <p>敌人会沿着<span class="hl">棕色路径</span>前进，你的任务是<span class="hl">在敌人到达终点前消灭它们</span>。每漏掉一个敌人会损失生命值（❤️），生命归零则<span class="warn">游戏失败</span>。成功防守全部 <span class="hl">20 波</span>敌人即可<span class="hl">获胜</span>！</p>
+        <h3>二、准备阶段</h3>
+        <p>游戏分为<span class="hl">准备阶段</span>和<span class="hl">战斗阶段</span>。</p>
+        <p>准备阶段你可以：</p>
+        <p>• 点击<span class="hl">塔按钮</span>（▣方块 ●快速 ▲溅射 ◆毒药）选中塔类型</p>
+        <p>• 点击地图上的<span class="key">绿色格子</span>建造防御塔</p>
+        <p>• 点击<span class="hl">"出售"</span>按钮再点击塔可以半价回收</p>
+        <p>• 点击<span class="hl">"开始波次"</span>进入战斗</p>
+        <p>⚠️ <span class="warn">战斗阶段开始后不能买塔或出售塔</span>，请提前布置好阵型！</p>
+        <h3>三、战斗阶段</h3>
+        <p>敌人会从左上角入口沿路径走向右下角出口。</p>
+        <p>塔会自动攻击范围内的敌人：</p>
+        <p>• <span style="color:#4488ff">▣ 方块塔（50💰）</span>：均衡单体输出</p>
+        <p>• <span style="color:#44ff44">● 快速塔（80💰）</span>：高射速多目标</p>
+        <p>• <span style="color:#ff4444">▲ 溅射塔（120💰）</span>：范围伤害清群怪</p>
+        <p>• <span style="color:#66ff66">◆ 毒药塔（90💰）</span>：50%减速 + 每秒流血</p>
+        <p>每波结束后会获得<span class="hl">波次奖金</span>，回到准备阶段。</p>
+        <p>右上角<span class="key">▶</span>按钮可切换 1x / 2x / 4x 倍速。</p>
+        <h3>四、角色操作</h3>
+        <p>屏幕下方的<span class="key">方向键</span>控制蓝色圆形角色移动：</p>
+        <p>• 角色<span class="hl">只能在路径上移动</span>，不能穿越障碍物</p>
+        <p>• 靠近敌人会<span class="key">自动攻击</span></p>
+        <p>• 接触敌人会将其<span class="key">阻挡</span>数秒（青色光圈）</p>
+        <p>• 但如果一直接触敌人，角色也会<span class="warn">持续受伤</span></p>
+        <p>善用角色的阻挡能力，配合毒药塔减速，在关键路口卡住敌人！</p>
+    </div>
+</div>
+
 <div id="game-container">
     <div id="canvas-wrapper">
         <canvas id="gameCanvas"></canvas>
@@ -308,23 +462,11 @@ canvas {
         </div>
     </div>
 </div>
-<div id="tutorial-overlay">
-    <div id="tutorial-card">
-        <h2 id="tutorial-title">玩法说明</h2>
-        <div id="tutorial-content"></div>
-        <div id="tutorial-dots"></div>
-        <div id="tutorial-nav">
-            <button id="tutorial-prev" class="tutorial-arrow">◀</button>
-            <span id="tutorial-page-num">1 / 4</span>
-            <button id="tutorial-next" class="tutorial-arrow">▶</button>
-            <button id="tutorial-start-btn" style="display:none;">开始游戏</button>
-        </div>
-    </div>
-</div>
 <div id="game-over-overlay">
     <h2 id="go-title"></h2>
     <p id="go-msg"></p>
     <button id="go-restart">🔄 重新开始</button>
+    <button id="go-menu" style="margin-top:12px;">🏠 返回主菜单</button>
 </div>
 <script>
 // ========== SECTION 1: CONSTANTS ==========
@@ -520,6 +662,7 @@ function resizeCanvas() {
     const wrapper = document.getElementById('canvas-wrapper');
     const w = wrapper.clientWidth;
     const h = wrapper.clientHeight;
+    if (w <= 0 || h <= 0) return; // game not visible
     const dpr = window.devicePixelRatio || 1;
     canvas.width = w * dpr;
     canvas.height = h * dpr;
@@ -1329,114 +1472,60 @@ function updateUI() {
     }
 }
 
-// ========== SECTION 12: TUTORIAL ==========
-let gameStarted = false;
-let tutorialPage = 0;
-const tutorialPages = [
-    {
-        html: '<p><span class="highlight">共 20 波</span>敌人从<span class="warn">入口</span>出发，沿沙色路径走向<span class="warn">基地</span>。</p>' +
-              '<p>消灭当前波次的所有敌人即可通关本波，进入下一波。</p>' +
-              '<p>每有一个敌人到达基地，会扣除 <span class="warn">生命值</span>。</p>' +
-              '<p>生命归零则<span class="warn">游戏失败</span>，坚持 20 波则<span class="highlight">胜利</span>。</p>',
-    },
-    {
-        html: '<p>用金币在<span class="key">绿色虚线格子</span>上点击放置防御塔。</p>' +
-              '<p><span style="color:#4488ff">▣ 方块塔（50金）</span>— 均衡输出</p>' +
-              '<p><span style="color:#44ff44">● 快速塔（80金）</span>— 高射速</p>' +
-              '<p><span style="color:#ff4444">▲ 溅射塔（120金）</span>— 范围爆炸</p>' +
-              '<p>可按<span class="warn">「出售」</span>点击已放置的塔，返还 70% 金币。</p>' +
-              '<p>布置好后点<span class="highlight">「开始波次」</span>进入战斗。</p>',
-    },
-    {
-        html: '<p>敌人从<span class="warn">入口</span>出发，沿<span class="key">沙色路径</span>走向基地。</p>' +
-              '<p>塔会<span class="key">自动攻击</span>范围内的敌人，优先打距离基地最近的。</p>' +
-              '<p><span class="warn">此阶段不能买塔或卖塔</span>，布阵一旦开始就无法更改。</p>' +
-              '<p>你可以控制<span class="key">角色</span>在战场上移动，协助塔进行防守。</p>',
-    },
-    {
-        html: '<p>用屏幕下方的<span class="key">虚拟方向键</span>控制角色上下左右移动。</p>' +
-              '<p>靠近敌人会自动<span class="highlight">近战攻击</span>（每次 10 点伤害）。</p>' +
-              '<p>碰到敌人可将其<span class="key">阻挡 0.8 秒</span>，是堵路的好手段。</p>' +
-              '<p><span class="warn">注意：</span>敌人也会反伤角色（每秒 5 点），角色仅 60 血，用完即结束。</p>',
-    },
-];
-
-function updateTutorialPage() {
-    const content = document.getElementById('tutorial-content');
-    content.innerHTML = tutorialPages[tutorialPage].html;
-    // Update dots
-    const dots = document.getElementById('tutorial-dots');
-    dots.innerHTML = '';
-    for (let i = 0; i < tutorialPages.length; i++) {
-        const dot = document.createElement('span');
-        if (i === tutorialPage) dot.className = 'active';
-        dots.appendChild(dot);
-    }
-    // Update page number
-    document.getElementById('tutorial-page-num').textContent = (tutorialPage + 1) + ' / ' + tutorialPages.length;
-    // Update arrows
-    const prevBtn = document.getElementById('tutorial-prev');
-    const nextBtn = document.getElementById('tutorial-next');
-    const startBtn = document.getElementById('tutorial-start-btn');
-    if (tutorialPage === 0) {
-        prevBtn.classList.add('hidden');
-    } else {
-        prevBtn.classList.remove('hidden');
-    }
-    if (tutorialPage === tutorialPages.length - 1) {
-        nextBtn.classList.add('hidden');
-        startBtn.style.display = 'inline-block';
-    } else {
-        nextBtn.classList.remove('hidden');
-        startBtn.style.display = 'none';
-    }
-}
-
-function showTutorial() {
-    tutorialPage = 0;
-    document.getElementById('tutorial-overlay').style.display = 'flex';
-    updateTutorialPage();
-}
-
-function hideTutorial() {
-    document.getElementById('tutorial-overlay').style.display = 'none';
-    gameStarted = true;
-}
-
-document.getElementById('tutorial-prev').addEventListener('click', () => {
-    if (tutorialPage > 0) {
-        tutorialPage--;
-        updateTutorialPage();
-    }
-});
-document.getElementById('tutorial-next').addEventListener('click', () => {
-    if (tutorialPage < tutorialPages.length - 1) {
-        tutorialPage++;
-        updateTutorialPage();
-    }
-});
-document.getElementById('tutorial-start-btn').addEventListener('click', hideTutorial);
-
-// ========== SECTION 13: START ==========
+// ========== SECTION 12: NAVIGATION & GAME START ==========
 // Register service worker for PWA
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
 }
-init();
-showTutorial();
-updateUI();
 
-// Override gameLoop to check gameStarted
-const _originalGameLoop = gameLoop;
-gameLoop = function(timestamp) {
-    if (!gameStarted) {
-        requestAnimationFrame(gameLoop);
-        lastTime = timestamp;
-        return;
+function showScreen(id) {
+    document.getElementById('main-menu').style.display = 'none';
+    document.getElementById('level-select').style.display = 'none';
+    document.getElementById('instructions').style.display = 'none';
+    document.getElementById('game-container').style.display = 'none';
+    if (id === 'main-menu') {
+        document.getElementById('main-menu').style.display = 'flex';
+    } else if (id === 'level-select') {
+        document.getElementById('level-select').style.display = 'flex';
+    } else if (id === 'instructions') {
+        document.getElementById('instructions').style.display = 'flex';
+    } else if (id === 'game') {
+        document.getElementById('game-container').style.display = 'flex';
     }
-    _originalGameLoop(timestamp);
-};
+}
 
+function startLevel(levelNum) {
+    showScreen('game');
+    init();
+    updateUI();
+}
+
+// Main menu buttons
+document.getElementById('btn-levels').addEventListener('click', () => showScreen('level-select'));
+document.getElementById('btn-howto').addEventListener('click', () => showScreen('instructions'));
+
+// Level select
+document.getElementById('ls-back-btn').addEventListener('click', () => showScreen('main-menu'));
+document.querySelectorAll('.level-btn:not(.locked)').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const lv = parseInt(btn.dataset.level);
+        startLevel(lv);
+    });
+});
+
+// Instructions back
+document.getElementById('ins-back-btn').addEventListener('click', () => showScreen('main-menu'));
+
+// Game over - return to menu
+document.getElementById('go-menu').addEventListener('click', () => {
+    document.getElementById('game-over-overlay').style.display = 'none';
+    showScreen('main-menu');
+});
+
+// Show main menu on load
+showScreen('main-menu');
+
+// ========== SECTION 13: GAME LOOP ==========
 requestAnimationFrame(gameLoop);
 </script>
 </body>
