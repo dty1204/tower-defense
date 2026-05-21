@@ -917,7 +917,7 @@ function updateTowers(dt) {
             const dy = e.row - t.row;
             const dist = Math.sqrt(dx*dx + dy*dy);
             if (dist <= t.range) {
-                const prog = e.wpIdx + e.progress / (e.speed || 1);
+                const prog = e.wpIdx;
                 if (prog > bestProgress) {
                     bestProgress = prog;
                     best = e;
