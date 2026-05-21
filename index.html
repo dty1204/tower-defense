@@ -486,12 +486,17 @@ canvas {
         <p>每波结束后会获得<span class="hl">波次奖金</span>，回到准备阶段。</p>
         <p>右上角<span class="key">▶</span>按钮可切换 1x / 2x / 4x 倍速。</p>
         <h3>四、角色操作</h3>
-        <p>屏幕下方的<span class="key">方向键</span>控制蓝色圆形角色移动：</p>
+        <p>使用下方<span class="key">方向键</span>或<span class="key">直接拖拽</span>角色控制移动：</p>
         <p>• 角色<span class="hl">只能在路径上移动</span>，不能穿越障碍物</p>
         <p>• 靠近敌人会<span class="key">自动攻击</span></p>
         <p>• 接触敌人会将其<span class="key">阻挡</span>数秒（青色光圈）</p>
         <p>• 但如果一直接触敌人，角色也会<span class="warn">持续受伤</span></p>
         <p>善用角色的阻挡能力，配合毒药塔减速，在关键路口卡住敌人！</p>
+        <h3>五、波次强化</h3>
+        <p>每波结束后会弹出<span class="hl">三张随机卡牌</span>，选择一张获得增益。</p>
+        <p>效果包括：塔攻击/攻速提升、敌人减速、获得金币、恢复生命等。</p>
+        <p>部分<span class="key">金色边框（唯一）</span>卡牌极为强力，但选中后不会再次出现。</p>
+        <p>选中卡牌后，才能点击"开始波次"进入下一波。</p>
     </div>
 </div>
 
@@ -1643,6 +1648,63 @@ canvas.addEventListener('click', (e) => {
         placeTower(selectedTowerType, cc, cr);
     }
 });
+
+// Drag-to-move player (alternative to D-pad)
+let dragging = false;
+function getCanvasColRow(e) {
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.clientX - rect.left - canvasOffsetX;
+    const cy = e.clientY - rect.top - canvasOffsetY;
+    return { col: cx / cellSize, row: cy / cellSize };
+}
+
+canvas.addEventListener('mousedown', (e) => {
+    if (gameState !== 'PLAYING') return;
+    dragging = true;
+    const { col, row } = getCanvasColRow(e);
+    tryMovePlayerTo(col, row);
+});
+canvas.addEventListener('mousemove', (e) => {
+    if (!dragging || gameState !== 'PLAYING') return;
+    const { col, row } = getCanvasColRow(e);
+    tryMovePlayerTo(col, row);
+});
+canvas.addEventListener('mouseup', () => { dragging = false; });
+canvas.addEventListener('mouseleave', () => { dragging = false; });
+
+canvas.addEventListener('touchstart', (e) => {
+    if (gameState !== 'PLAYING') return;
+    dragging = true;
+    const touch = e.touches[0];
+    const { col, row } = getCanvasColRow(touch);
+    tryMovePlayerTo(col, row);
+}, { passive: false });
+canvas.addEventListener('touchmove', (e) => {
+    if (!dragging || gameState !== 'PLAYING') return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const { col, row } = getCanvasColRow(touch);
+    tryMovePlayerTo(col, row);
+}, { passive: false });
+canvas.addEventListener('touchend', () => { dragging = false; });
+canvas.addEventListener('touchcancel', () => { dragging = false; });
+
+function tryMovePlayerTo(col, row) {
+    // Clamp to grid bounds with margin
+    const clampedCol = Math.max(0.4, Math.min(GRID_COLS - 0.4, col));
+    const clampedRow = Math.max(0.4, Math.min(GRID_ROWS - 0.4, row));
+    // Check both axes independently (same as D-pad logic)
+    const cellX = Math.floor(clampedCol);
+    const cellRowX = Math.floor(player.row);
+    if (cellRowX >= 0 && cellRowX < GRID_ROWS && cellX >= 0 && cellX < GRID_COLS && grid[cellRowX][cellX] === 1) {
+        player.col = clampedCol;
+    }
+    const cellY = Math.floor(clampedRow);
+    const cellColY = Math.floor(player.col);
+    if (cellY >= 0 && cellY < GRID_ROWS && cellColY >= 0 && cellColY < GRID_COLS && grid[cellY][cellColY] === 1) {
+        player.row = clampedRow;
+    }
+}
 
 // Tower selection buttons
 document.querySelectorAll('.tower-btn[data-tower]').forEach(btn => {
