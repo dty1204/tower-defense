@@ -368,6 +368,68 @@ canvas {
 #instructions .ins-content .hl { color: #ffd700; }
 #instructions .ins-content .key { color: #00ddff; }
 #instructions .ins-content .warn { color: #ff6666; }
+/* ====== CARD PICK OVERLAY ====== */
+#card-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.88);
+    z-index: 200;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+}
+#card-overlay .card-title {
+    font-size: 24px;
+    color: #ffd700;
+    letter-spacing: 3px;
+    text-shadow: 0 0 20px rgba(255,215,0,0.4);
+}
+#card-overlay .card-subtitle {
+    font-size: 13px;
+    color: rgba(255,255,255,0.5);
+    margin-top: -8px;
+}
+#card-row {
+    display: flex;
+    gap: 12px;
+    padding: 0 16px;
+}
+.card {
+    width: 100px;
+    padding: 16px 10px;
+    border: 2px solid #555;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #1a1a3e 0%, #0f0f28 100%);
+    color: #ccc;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+.card:active {
+    border-color: #ffd700;
+    box-shadow: 0 0 20px rgba(255,215,0,0.35);
+    transform: scale(1.03);
+}
+.card .card-icon { font-size: 32px; }
+.card .card-name { font-size: 13px; font-weight: bold; color: #ffd700; }
+.card .card-desc { font-size: 11px; color: #aaa; line-height: 1.4; }
+.card.one-time { border-color: #ff6600; }
+.card.one-time::after {
+    content: '唯一';
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    font-size: 10px;
+    color: #ff6600;
+    font-weight: bold;
+}
 </style>
 </head>
 <body>
@@ -467,6 +529,13 @@ canvas {
     <p id="go-msg"></p>
     <button id="go-restart">🔄 重新开始</button>
     <button id="go-menu" style="margin-top:12px;">🏠 返回主菜单</button>
+</div>
+
+<!-- ====== ROGUELIKE CARD PICK ====== -->
+<div id="card-overlay">
+    <div class="card-title">选择强化</div>
+    <div class="card-subtitle">点击一张卡牌获取增益</div>
+    <div id="card-row"></div>
 </div>
 <script>
 // ========== SECTION 1: CONSTANTS ==========
@@ -704,8 +773,24 @@ function buildGrid(segments) {
     return grid;
 }
 
+// ===== ROGUELIKE CARDS =====
+const ALL_CARDS = [
+    { id: 1,  name: '力量强化', desc: '所有塔攻击力 +10%', icon: '⚔️', oneTime: false, apply() { towerDamageMult *= 1.10; } },
+    { id: 2,  name: '急速射击', desc: '所有塔攻速 +10%', icon: '⚡', oneTime: false, apply() { towerFireRateMult *= 1.10; } },
+    { id: 3,  name: '泥泞之路', desc: '所有敌人移速 -10%', icon: '🐌', oneTime: false, apply() { enemySpeedMult *= 0.90; } },
+    { id: 4,  name: '意外事故', desc: '扣除 10 点生命值', icon: '💀', oneTime: false, apply() { lives = Math.max(1, lives - 10); updateUI(); } },
+    { id: 5,  name: '光能过载', desc: '方块塔化为光能炮：攻速 -50%，伤害 +200%', icon: '🔫', oneTime: true, apply() { squareSupercharged = true; } },
+    { id: 6,  name: '致命裂隙', desc: '溅射塔造成伤害时 2% 概率秒杀', icon: '💥', oneTime: true, apply() { splashInstaKill = true; } },
+    { id: 7,  name: '时停弹幕', desc: '所有塔 5% 概率使敌人停顿 1 秒', icon: '⏳', oneTime: true, apply() { globalStunChance = true; } },
+    { id: 8,  name: '急救包', desc: '恢复 10 点生命值', icon: '💚', oneTime: false, apply() { lives = Math.min(STARTING_LIVES, lives + 10); updateUI(); } },
+    { id: 9,  name: '创可贴', desc: '恢复 5 点生命值', icon: '🩹', oneTime: false, apply() { lives = Math.min(STARTING_LIVES, lives + 5); updateUI(); } },
+    { id: 10, name: '神圣干涉', desc: '下一波所有敌人血量变为 1 点', icon: '✨', oneTime: false, apply() { nextWaveOneHp = true; } },
+    { id: 11, name: '意外之财', desc: '获得 100 金币', icon: '💰', oneTime: false, apply() { gold += 100; updateUI(); } },
+    { id: 12, name: '赏金猎人', desc: '击败敌人金币 +10%', icon: '🎯', oneTime: false, apply() { goldBonusMult *= 1.10; } },
+];
+
 // ========== SECTION 2: GAME STATE ==========
-let gameState = 'PLANNING'; // PLANNING | PLAYING | GAME_OVER
+let gameState = 'PLANNING'; // PLANNING | PLAYING | GAME_OVER | CARD_PICK
 let gold = STARTING_GOLD;
 let lives = STARTING_LIVES;
 let currentWave = 1;
@@ -727,6 +812,18 @@ let speedState = 0; // 0=1x, 1=2x, 2=4x
 const SPEED_VALUES = [1, 2, 4];
 const SPEED_ICONS = ['▶', '▶▶', '▶▶▶'];
 let speedMultiplier = 1;
+
+// Roguelike card modifiers
+let towerDamageMult = 1.0;
+let towerFireRateMult = 1.0;
+let enemySpeedMult = 1.0;
+let goldBonusMult = 1.0;
+let squareSupercharged = false;
+let splashInstaKill = false;
+let globalStunChance = false;
+let nextWaveOneHp = false;
+let usedOneTimeCards = {};
+let cardPickResolve = null;
 
 // ========== SECTION 3: DOM REFS ==========
 const canvas = document.getElementById('gameCanvas');
@@ -773,6 +870,16 @@ function init() {
     speedMultiplier = 1;
     speedBtn.textContent = SPEED_ICONS[0];
     player = { col: 5.5, row: 12, hp: 60, maxHp: 60, attackCooldown: 0, attackRange: 1.2, damage: 10, attackRate: 0.8, speed: 2.5 };
+    // Reset roguelike modifiers
+    towerDamageMult = 1.0;
+    towerFireRateMult = 1.0;
+    enemySpeedMult = 1.0;
+    goldBonusMult = 1.0;
+    squareSupercharged = false;
+    splashInstaKill = false;
+    globalStunChance = false;
+    nextWaveOneHp = false;
+    usedOneTimeCards = {};
     updateUI();
     document.querySelectorAll('.tower-btn[data-tower]').forEach(b => b.classList.remove('selected'));
     sellBtn.classList.remove('selected');
@@ -837,16 +944,17 @@ function updateSpawn(dt) {
         const useAlt = WAYPOINTS_ALT && laneToggle;
         const wps = useAlt ? WAYPOINTS_ALT : WAYPOINTS;
         laneToggle = !laneToggle;
+        const ehp = nextWaveOneHp ? 1 : def.hp;
         enemies.push({
             type: typeIdx,
             col: wps[0].col,
             row: wps[0].row,
             wpIdx: 1,
             waypoints: wps,
-            hp: def.hp,
+            hp: ehp,
             maxHp: def.hp,
-            speed: def.speed,
-            origSpeed: def.speed,
+            speed: def.speed * enemySpeedMult,
+            origSpeed: def.speed * enemySpeedMult,
             reward: def.reward,
             leakLives: def.leakLives,
             size: def.size,
@@ -861,7 +969,7 @@ function updateEnemies(dt) {
     for (const e of enemies) {
         // Bleed (poison DOT)
         if (e.bleedTimer > 0) {
-            e.hp -= 10 * dt; // bleed damage per second
+            e.hp -= 10 * dt * towerDamageMult; // bleed damage per second
             e.bleedTimer = Math.max(0, e.bleedTimer - dt);
             // Spawn periodic bleed particles
             if (Math.random() < 4 * dt) {
@@ -926,11 +1034,18 @@ function updateTowers(dt) {
         }
         if (best) {
             const def = TOWER_DEFS[t.type];
+            const isSquare = (t.type === 0);
+            let dmg = def.damage * towerDamageMult;
+            let cd = 1 / (def.fireRate * towerFireRateMult);
+            if (isSquare && squareSupercharged) {
+                dmg *= 3.0;   // +200% = 3x
+                cd *= 2.0;     // -50% speed = 2x cooldown
+            }
             projectiles.push({
                 col: t.col,
                 row: t.row,
                 target: best,
-                damage: def.damage,
+                damage: dmg,
                 speed: def.projSpeed,
                 splash: def.splash,
                 splashRadius: def.splashRadius || 0,
@@ -938,11 +1053,28 @@ function updateTowers(dt) {
                 bleedDuration: def.bleedDuration || 0,
                 slowDuration: def.slowDuration || 0,
                 color: def.color,
+                splashInstaKill: splashInstaKill && def.splash,
+                globalStun: globalStunChance,
             });
-            t.cooldown = 1 / def.fireRate;
+            t.cooldown = cd;
         }
     }
 }
+function applyDamage(enemy, dmg, projectile) {
+    // Splash instakill check (card 6)
+    if (projectile.splashInstaKill && Math.random() < 0.02) {
+        enemy.hp = 0;
+        effects.push({ col: enemy.col, row: enemy.row, type: 'instakill', timer: 0.5, maxTimer: 0.5 });
+        return;
+    }
+    enemy.hp -= dmg;
+    // Global stun check (card 7)
+    if (projectile.globalStun && Math.random() < 0.05) {
+        enemy.blockedTimer = Math.max(enemy.blockedTimer, 1.0);
+        effects.push({ col: enemy.col, row: enemy.row, type: 'stun', timer: 0.4, maxTimer: 0.4 });
+    }
+}
+
 function updateProjectiles(dt) {
     for (const p of projectiles) {
         if (!p.target || p.target.hp <= 0) {
@@ -961,17 +1093,17 @@ function updateProjectiles(dt) {
                     const edx = e.col - p.target.col;
                     const edy = e.row - p.target.row;
                     if (Math.sqrt(edx*edx + edy*edy) <= p.splashRadius) {
-                        e.hp -= p.damage;
+                        applyDamage(e, p.damage, p);
                     }
                 }
                 effects.push({ col: p.target.col, row: p.target.row, type: 'splash', timer: 0.3, maxTimer: 0.3, radius: p.splashRadius });
             } else if (p.poison) {
-                p.target.hp -= p.damage;
+                applyDamage(p.target, p.damage, p);
                 p.target.bleedTimer = Math.max(p.target.bleedTimer, p.bleedDuration);
                 p.target.slowTimer = Math.max(p.target.slowTimer, p.slowDuration);
                 effects.push({ col: p.target.col, row: p.target.row, type: 'poisonHit', timer: 0.3, maxTimer: 0.3 });
             } else {
-                p.target.hp -= p.damage;
+                applyDamage(p.target, p.damage, p);
                 effects.push({ col: p.target.col, row: p.target.row, type: 'hit', timer: 0.15, maxTimer: 0.15 });
             }
             p.dead = true;
@@ -1076,7 +1208,7 @@ function checkWaveComplete() {
     if (gameState !== 'PLAYING') return;
     for (let i = enemies.length - 1; i >= 0; i--) {
         if (enemies[i].hp <= 0) {
-            gold += enemies[i].reward;
+            gold += Math.floor(enemies[i].reward * goldBonusMult);
             effects.push({ col: enemies[i].col, row: enemies[i].row, type: 'gold', timer: 0.6, maxTimer: 0.6, amount: enemies[i].reward });
             enemies.splice(i, 1);
         }
@@ -1089,8 +1221,16 @@ function checkWaveComplete() {
             enemies.splice(i, 1);
         }
     }
+    // Check lives first (before wave transition to avoid overlay conflicts)
+    if (lives <= 0) {
+        lives = 0;
+        gameState = 'GAME_OVER';
+        showGameOver(false);
+        return;
+    }
     // Check if wave complete
     if (enemies.length === 0 && spawnQueue.length === 0) {
+        nextWaveOneHp = false; // one-HP effect only lasts one wave
         const bonus = 50 + currentWave * 5;
         gold += bonus;
         currentWave++;
@@ -1099,19 +1239,45 @@ function checkWaveComplete() {
             showGameOver(true);
             return;
         }
-        gameState = 'PLANNING';
-        updateUI();
-    }
-    // Check lives
-    if (lives <= 0) {
-        lives = 0;
-        gameState = 'GAME_OVER';
-        showGameOver(false);
+        showCardPick();
     }
     updateUI();
 }
 
+function showCardPick() {
+    gameState = 'CARD_PICK';
+    document.getElementById('card-overlay').style.display = 'flex';
+    const row = document.getElementById('card-row');
+    // Build pool: exclude one-time cards already used
+    const pool = ALL_CARDS.filter(c => !(c.oneTime && usedOneTimeCards[c.id]));
+    // Shuffle and pick 3
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    const picks = shuffled.slice(0, 3);
+    row.innerHTML = '';
+    picks.forEach(c => {
+        const el = document.createElement('div');
+        el.className = 'card' + (c.oneTime ? ' one-time' : '');
+        el.style.position = 'relative';
+        el.innerHTML = '<span class="card-icon">' + c.icon + '</span>' +
+            '<span class="card-name">' + c.name + '</span>' +
+            '<span class="card-desc">' + c.desc + '</span>';
+        el.addEventListener('click', () => pickCard(c));
+        // Prevent canvas clicks while picking
+        el.addEventListener('touchstart', (e) => { e.stopPropagation(); });
+        row.appendChild(el);
+    });
+}
+
+function pickCard(card) {
+    card.apply();
+    if (card.oneTime) usedOneTimeCards[card.id] = true;
+    document.getElementById('card-overlay').style.display = 'none';
+    gameState = 'PLANNING';
+    updateUI();
+}
+
 function showGameOver(victory) {
+    document.getElementById('card-overlay').style.display = 'none';
     gameOverOverlay.style.display = 'flex';
     if (victory) {
         goTitle.className = 'victory';
@@ -1381,6 +1547,19 @@ function renderEffects() {
             ctx.fillStyle = `rgba(255,0,0,${t})`;
             ctx.font = `${Math.floor(16 + t * 8)}px Arial`;
             ctx.fillText('💔', x - 10, y - 5 - t * 10);
+        } else if (ef.type === 'instakill') {
+            ctx.fillStyle = `rgba(255,100,0,${t})`;
+            ctx.font = `${Math.floor(20 + t * 10)}px Arial`;
+            ctx.fillText('💥', x - 12, y - 8 - t * 12);
+        } else if (ef.type === 'stun') {
+            ctx.strokeStyle = `rgba(255,255,100,${t})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(x, y, cellSize * 0.55, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.fillStyle = `rgba(255,255,100,${t * 0.5})`;
+            ctx.font = `${Math.floor(12 + t * 6)}px Arial`;
+            ctx.fillText('⏳', x - 8, y - 5 - t * 10);
         }
     }
 }
@@ -1619,6 +1798,7 @@ function showScreen(id) {
     document.getElementById('level-select').style.display = 'none';
     document.getElementById('instructions').style.display = 'none';
     document.getElementById('game-container').style.display = 'none';
+    document.getElementById('card-overlay').style.display = 'none';
     if (id === 'main-menu') {
         document.getElementById('main-menu').style.display = 'flex';
     } else if (id === 'level-select') {
