@@ -485,6 +485,44 @@ const TOWER_DEFS = [
 const LEVELS = {
     1: {
         name: '翠绿平原',
+        pathSegments: [
+            { c1:4, r1:0, c2:7,  r2:0 },
+            { c1:7, r1:0, c2:8,  r2:1 },
+            { c1:7, r1:1, c2:8,  r2:2 },
+            { c1:2, r1:2, c2:8,  r2:2 },
+            { c1:2, r1:2, c2:3,  r2:3 },
+            { c1:2, r1:3, c2:11, r2:4 },
+            { c1:10, r1:4, c2:11, r2:5 },
+            { c1:0, r1:5, c2:11, r2:5 },
+            { c1:0, r1:6, c2:1,  r2:7 },
+            { c1:0, r1:7, c2:11, r2:8 },
+            { c1:10, r1:8, c2:11, r2:10 },
+            { c1:0, r1:10, c2:11, r2:10 },
+            { c1:0, r1:11, c2:3,  r2:11 },
+            { c1:2, r1:12, c2:9,  r2:12 },
+            { c1:7, r1:13, c2:8,  r2:13 },
+            { c1:4, r1:14, c2:7,  r2:14 },
+            { c1:5, r1:15, c2:6,  r2:15 },
+        ],
+        waypoints: [
+            { col: 5.5, row: 0 },
+            { col: 7.5, row: 1 },
+            { col: 7.5, row: 2 },
+            { col: 2.5, row: 2 },
+            { col: 2.5, row: 3 },
+            { col: 6.5, row: 4 },
+            { col: 10.5, row: 5 },
+            { col: 0.5, row: 5 },
+            { col: 0.5, row: 7 },
+            { col: 5.5, row: 8 },
+            { col: 10.5, row: 10 },
+            { col: 0.5, row: 10 },
+            { col: 0.5, row: 11 },
+            { col: 5.5, row: 12 },
+            { col: 7.5, row: 13 },
+            { col: 5.5, row: 14 },
+            { col: 5.5, row: 15 },
+        ],
         theme: {
             infoBg: '#141428',
             panelBg: '#0d0d20',
@@ -527,6 +565,56 @@ const LEVELS = {
     },
     2: {
         name: '冰霜雪原',
+        pathSegments: [
+            // Left lane
+            { c1:1, r1:0, c2:3, r2:3 },
+            { c1:1, r1:3, c2:5, r2:4 },
+            // Right lane
+            { c1:8, r1:0, c2:10, r2:3 },
+            { c1:6, r1:3, c2:10, r2:4 },
+            // Merge zone
+            { c1:4, r1:4, c2:7, r2:5 },
+            // Merged path
+            { c1:4, r1:5, c2:5, r2:8 },
+            { c1:5, r1:8, c2:10, r2:8 },
+            { c1:9, r1:8, c2:10, r2:10 },
+            { c1:1, r1:10, c2:10, r2:10 },
+            { c1:1, r1:10, c2:2, r2:12 },
+            { c1:2, r1:12, c2:8, r2:12 },
+            { c1:7, r1:12, c2:8, r2:14 },
+            { c1:4, r1:14, c2:8, r2:14 },
+            { c1:4, r1:14, c2:6, r2:15 },
+        ],
+        waypoints: [
+            { col: 2.5, row: 0 },
+            { col: 2.5, row: 3 },
+            { col: 5.5, row: 4 },
+            { col: 5.5, row: 5 },
+            { col: 5.5, row: 8 },
+            { col: 9.5, row: 8 },
+            { col: 9.5, row: 10 },
+            { col: 1.5, row: 10 },
+            { col: 1.5, row: 12 },
+            { col: 7.5, row: 12 },
+            { col: 7.5, row: 14 },
+            { col: 5.5, row: 14 },
+            { col: 5.5, row: 15 },
+        ],
+        waypointsAlt: [
+            { col: 8.5, row: 0 },
+            { col: 8.5, row: 3 },
+            { col: 5.5, row: 4 },
+            { col: 5.5, row: 5 },
+            { col: 5.5, row: 8 },
+            { col: 9.5, row: 8 },
+            { col: 9.5, row: 10 },
+            { col: 1.5, row: 10 },
+            { col: 1.5, row: 12 },
+            { col: 7.5, row: 12 },
+            { col: 7.5, row: 14 },
+            { col: 5.5, row: 14 },
+            { col: 5.5, row: 15 },
+        ],
         theme: {
             infoBg: '#0f1f2e',
             panelBg: '#0a1520',
@@ -577,54 +665,17 @@ let THEME = {};
 let STARTING_GOLD = 300;
 let STARTING_LIVES = 15;
 
-// Path waypoints: enemies follow these in order (match path segments above)
-const WAYPOINTS = [
-    { col: 5.5, row: 0 },     // 0: entrance center
-    { col: 7.5, row: 1 },     // 1: right edge
-    { col: 7.5, row: 2 },     // 2: right edge before turn
-    { col: 2.5, row: 2 },     // 3: left turn zone
-    { col: 2.5, row: 3 },     // 4: left edge
-    { col: 6.5, row: 4 },     // 5: mid-right corridor
-    { col: 10.5, row: 5 },    // 6: right edge
-    { col: 0.5, row: 5 },     // 7: bridge to left side
-    { col: 0.5, row: 7 },     // 8: left edge bottom
-    { col: 5.5, row: 8 },     // 9: center of wide corridor
-    { col: 10.5, row: 10 },   // 10: right edge
-    { col: 0.5, row: 10 },    // 11: bridge to left side
-    { col: 0.5, row: 11 },    // 12: left edge
-    { col: 5.5, row: 12 },    // 13: center corridor
-    { col: 7.5, row: 13 },    // 14: narrow point
-    { col: 5.5, row: 14 },    // 15: widened area
-    { col: 5.5, row: 15 },    // 16: exit
-];
+// Mutable globals set by startLevel
+let WAYPOINTS = [];
+let WAYPOINTS_ALT = null; // second lane (Level 2+)
 
 // Path grid data: 0=grass, 1=path, 2=buildable
-function buildGrid() {
+function buildGrid(segments) {
     const grid = [];
     for (let row = 0; row < GRID_ROWS; row++) {
         grid[row] = new Array(GRID_COLS).fill(0);
     }
-    // Mark path cells as rectangular segments (all must connect continuously)
-    const pathSegments = [
-        { c1:4, r1:0, c2:7,  r2:0 },    // Row 0: entrance (cols 4-7)
-        { c1:7, r1:0, c2:8,  r2:1 },    // Row 0-1: right edge (cols 7-8)
-        { c1:7, r1:1, c2:8,  r2:2 },    // Row 1-2: right edge continue
-        { c1:2, r1:2, c2:8,  r2:2 },    // Row 2: turn zone (extends left cols 2-8)
-        { c1:2, r1:2, c2:3,  r2:3 },    // Row 2-3: left edge (cols 2-3)
-        { c1:2, r1:3, c2:11, r2:4 },    // Row 3-4: go right (cols 2-11)
-        { c1:10, r1:4, c2:11, r2:5 },   // Row 4-5: right edge (cols 10-11)
-        { c1:0, r1:5, c2:11, r2:5 },    // Row 5: bridge right to left (cols 0-11)
-        { c1:0, r1:6, c2:1,  r2:7 },    // Row 6-7: left edge go down (cols 0-1)
-        { c1:0, r1:7, c2:11, r2:8 },    // Row 7-8: wide corridor right (cols 0-11)
-        { c1:10, r1:8, c2:11, r2:10 },  // Row 8-10: right edge (cols 10-11)
-        { c1:0, r1:10, c2:11, r2:10 },  // Row 10: bridge right to left (cols 0-11)
-        { c1:0, r1:11, c2:3,  r2:11 },  // Row 11: left area (cols 0-3)
-        { c1:2, r1:12, c2:9,  r2:12 },  // Row 12: corridor (cols 2-9)
-        { c1:7, r1:13, c2:8,  r2:13 },  // Row 13: narrow (cols 7-8)
-        { c1:4, r1:14, c2:7,  r2:14 },  // Row 14: widen (cols 4-7)
-        { c1:5, r1:15, c2:6,  r2:15 },  // Row 15: exit (cols 5-6)
-    ];
-    for (const seg of pathSegments) {
+    for (const seg of segments) {
         for (let c = seg.c1; c <= seg.c2; c++) {
             for (let r = seg.r1; r <= seg.r2; r++) {
                 if (c >= 0 && c < GRID_COLS && r >= 0 && r < GRID_ROWS) {
@@ -700,8 +751,10 @@ function toggleSpeed() {
 speedBtn.addEventListener('click', toggleSpeed);
 
 // ========== SECTION 4: INITIALIZATION ==========
+let currentLevel = null;
+
 function init() {
-    grid = buildGrid();
+    grid = buildGrid(LEVELS[currentLevel].pathSegments);
     resizeCanvas();
     gold = STARTING_GOLD;
     lives = STARTING_LIVES;
@@ -771,6 +824,8 @@ function gameLoop(timestamp) {
 }
 
 // ========== SECTION 6: UPDATE FUNCTIONS ==========
+let laneToggle = false;
+
 function updateSpawn(dt) {
     if (spawnQueue.length === 0) return;
     spawnTimer += dt;
@@ -778,12 +833,16 @@ function updateSpawn(dt) {
         spawnTimer -= SPAWN_INTERVAL;
         const typeIdx = spawnQueue.shift();
         const def = ENEMY_DEFS[typeIdx];
+        // Alternate between lanes if dual spawn
+        const useAlt = WAYPOINTS_ALT && laneToggle;
+        const wps = useAlt ? WAYPOINTS_ALT : WAYPOINTS;
+        laneToggle = !laneToggle;
         enemies.push({
             type: typeIdx,
-            col: WAYPOINTS[0].col,
-            row: WAYPOINTS[0].row,
+            col: wps[0].col,
+            row: wps[0].row,
             wpIdx: 1,
-            progress: 0,
+            waypoints: wps,
             hp: def.hp,
             maxHp: def.hp,
             speed: def.speed,
@@ -817,8 +876,9 @@ function updateEnemies(dt) {
 
         e.blockedTimer = Math.max(0, e.blockedTimer - dt);
         if (e.blockedTimer > 0) continue;
-        if (e.wpIdx >= WAYPOINTS.length) continue;
-        const target = WAYPOINTS[e.wpIdx];
+        const wps = e.waypoints || WAYPOINTS;
+        if (e.wpIdx >= wps.length) continue;
+        const target = wps[e.wpIdx];
         const dx = target.col - e.col;
         const dy = target.row - e.row;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -828,8 +888,8 @@ function updateEnemies(dt) {
             e.row = target.row;
             e.wpIdx++;
             const rem = moveDist - dist;
-            if (e.wpIdx < WAYPOINTS.length && rem > 0) {
-                const next = WAYPOINTS[e.wpIdx];
+            if (e.wpIdx < wps.length && rem > 0) {
+                const next = wps[e.wpIdx];
                 const ndx = next.col - target.col;
                 const ndy = next.row - target.row;
                 const ndist = Math.sqrt(ndx * ndx + ndy * ndy);
@@ -1023,7 +1083,7 @@ function checkWaveComplete() {
     }
     // Check enemies at goal
     for (let i = enemies.length - 1; i >= 0; i--) {
-        if (enemies[i].wpIdx >= WAYPOINTS.length) {
+        if (enemies[i].wpIdx >= (enemies[i].waypoints || WAYPOINTS).length) {
             lives -= enemies[i].leakLives;
             effects.push({ col: enemies[i].col, row: enemies[i].row, type: 'leak', timer: 0.8, maxTimer: 0.8 });
             enemies.splice(i, 1);
@@ -1113,12 +1173,13 @@ function renderGrid() {
             }
         }
     }
-    // Spawn marker
-    const sx = toPixelX(WAYPOINTS[0].col) - 10;
-    const sy = toPixelY(WAYPOINTS[0].row) - 10;
-    ctx.fillStyle = '#ff0';
+    // Spawn markers
     ctx.font = '14px Arial';
+    ctx.fillStyle = '#ff0';
     ctx.fillText('入口', toPixelX(WAYPOINTS[0].col) + 5, toPixelY(WAYPOINTS[0].row) - 8);
+    if (WAYPOINTS_ALT) {
+        ctx.fillText('入口', toPixelX(WAYPOINTS_ALT[0].col) + 5, toPixelY(WAYPOINTS_ALT[0].row) - 8);
+    }
     // Goal marker
     const last = WAYPOINTS[WAYPOINTS.length - 1];
     ctx.fillStyle = '#f44';
@@ -1175,8 +1236,9 @@ function renderEnemies() {
         const def = ENEMY_DEFS[e.type];
         // Calculate rotation angle toward next waypoint
         let angle = 0;
-        if (e.wpIdx < WAYPOINTS.length) {
-            const twp = WAYPOINTS[e.wpIdx];
+        const wps2 = e.waypoints || WAYPOINTS;
+        if (e.wpIdx < wps2.length) {
+            const twp = wps2[e.wpIdx];
             angle = Math.atan2(twp.row - e.row, twp.col - e.col);
         }
         ctx.save();
@@ -1570,12 +1632,14 @@ function showScreen(id) {
 
 function startLevel(levelNum) {
     const lv = LEVELS[levelNum];
+    currentLevel = levelNum;
     ENEMY_DEFS = lv.enemies;
     WAVES = lv.waves;
     THEME = lv.theme;
+    WAYPOINTS = lv.waypoints;
+    WAYPOINTS_ALT = lv.waypointsAlt || null;
     STARTING_GOLD = lv.theme.startGold;
     STARTING_LIVES = lv.theme.startLives;
-    // Apply theme to UI panels
     document.getElementById('info-bar').style.background = lv.theme.infoBg;
     document.getElementById('planning-panel').style.background = lv.theme.panelBg;
     document.getElementById('playing-panel').style.background = lv.theme.panelBg;
