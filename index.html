@@ -390,7 +390,7 @@ canvas {
     </div>
     <div class="level-grid">
         <button class="level-btn" data-level="1">第 1 关</button>
-        <button class="level-btn locked" data-level="2">第 2 关 🔒</button>
+        <button class="level-btn" data-level="2">第 2 关 · 冰霜雪原</button>
         <button class="level-btn locked" data-level="3">第 3 关 🔒</button>
         <button class="level-btn locked" data-level="4">第 4 关 🔒</button>
         <button class="level-btn locked" data-level="5">第 5 关 🔒</button>
@@ -472,43 +472,110 @@ canvas {
 // ========== SECTION 1: CONSTANTS ==========
 const GRID_COLS = 12;
 const GRID_ROWS = 16;
+const SPAWN_INTERVAL = 0.6;
+
 const TOWER_DEFS = [
     { name: '方块塔', shape: 'square', color: '#4488ff', darkColor: '#2266cc', cost: 50, damage: 12, range: 3.0, fireRate: 1.0, projSpeed: 8, splash: false },
     { name: '快速塔', shape: 'circle', color: '#44ff44', darkColor: '#22cc22', cost: 80, damage: 5, range: 3.5, fireRate: 2.5, projSpeed: 12, splash: false },
     { name: '溅射塔', shape: 'triangle', color: '#ff4444', darkColor: '#cc2222', cost: 120, damage: 22, range: 2.5, fireRate: 0.6, projSpeed: 6, splash: true, splashRadius: 1.5 },
     { name: '毒药塔', shape: 'diamond', color: '#66ff66', darkColor: '#33cc33', cost: 90, damage: 6, range: 3.2, fireRate: 1.2, projSpeed: 10, splash: false, poison: true, bleedDamage: 10, bleedDuration: 3, slowFactor: 0.5, slowDuration: 3 },
 ];
-const ENEMY_DEFS = [
-    { name: '侦察兵', shape: 'circle', color: '#ff4444', hp: 120, speed: 3.0, reward: 15, leakLives: 1, size: 0.4 },
-    { name: '士兵',   shape: 'square', color: '#ff8844', hp: 300, speed: 1.8, reward: 30, leakLives: 2, size: 0.5 },
-    { name: '坦克',   shape: 'pentagon', color: '#aa44ff', hp: 750, speed: 1.2, reward: 80, leakLives: 5, size: 0.6 },
-    { name: 'Boss',    shape: 'hexagon', color: '#ffcc00', hp: 1800, speed: 0.8, reward: 250, leakLives: 10, size: 0.8 },
-];
-const WAVES = [
-    [0,0,0,0,0,0,0,0],  // wave 1: 8 scouts
-    [0,0,0,0,0,0,0,0,0,0,0,0],  // 2: 12 scouts
-    [0,0,0,0,0,0,1,1,1,1],  // 3: 6 scouts + 4 soldiers
-    [1,1,1,1,1,0,0,0,0,0,0,0],  // 4: 5 soldiers + 7 scouts
-    [2],  // 5: 1 tank
-    [1,1,1,1,1,1,1,1,1,1],  // 6: 10 soldiers
-    [0,0,0,0,0,0,0,1,1,1,1,1,1,1],  // 7: 7 scouts + 7 soldiers
-    [2,2,2],  // 8: 3 tanks
-    [0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,2,2],  // 9: 12 scouts + 5 soldiers + 2 tanks
-    [3],  // 10: boss
-    [1,1,1,1,1,1,1,2,2,2,2],  // 11: 7 soldiers + 4 tanks
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],  // 12: 18 scouts (rush)
-    [0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,2,2,2],  // 13: 10 scouts + 7 soldiers + 3 tanks
-    [2,2,2,2,2],  // 14: 5 tanks
-    [3,0,0,0,0,0,0,0,0,0],  // 15: boss + 9 scouts
-    [1,1,1,1,1,1,1,1,2,2,2,2,2],  // 16: 8 soldiers + 5 tanks
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],  // 17: 25 scouts (mass rush)
-    [2,2,2,2,3],  // 18: 4 tanks + boss
-    [0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,2,2,2,3],  // 19: 10 scouts + 8 soldiers + 3 tanks + boss
-    [3,3],  // 20: 2 bosses
-];
-const STARTING_GOLD = 300;
-const STARTING_LIVES = 15;
-const SPAWN_INTERVAL = 0.6; // seconds between enemy spawns
+
+// ===== LEVEL CONFIGURATION =====
+const LEVELS = {
+    1: {
+        name: '翠绿平原',
+        theme: {
+            infoBg: '#141428',
+            panelBg: '#0d0d20',
+            grass: '#1a3a1a',
+            path: '#c4a45a',
+            buildable: '#223322',
+            buildableBorder: 'rgba(255,255,255,0.12)',
+            gridLine: 'rgba(255,255,255,0.04)',
+            startGold: 300,
+            startLives: 15,
+        },
+        enemies: [
+            { name: '侦察兵', shape: 'circle', color: '#ff4444', hp: 120, speed: 3.0, reward: 15, leakLives: 1, size: 0.4 },
+            { name: '士兵',   shape: 'square', color: '#ff8844', hp: 300, speed: 1.8, reward: 30, leakLives: 2, size: 0.5 },
+            { name: '坦克',   shape: 'pentagon', color: '#aa44ff', hp: 750, speed: 1.2, reward: 80, leakLives: 5, size: 0.6 },
+            { name: 'Boss',    shape: 'hexagon', color: '#ffcc00', hp: 1800, speed: 0.8, reward: 250, leakLives: 10, size: 0.8 },
+        ],
+        waves: [
+            [0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,1,1,1,1],
+            [1,1,1,1,1,0,0,0,0,0,0,0],
+            [2],
+            [1,1,1,1,1,1,1,1,1,1],
+            [0,0,0,0,0,0,0,1,1,1,1,1,1,1],
+            [2,2,2],
+            [0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,2,2],
+            [3],
+            [1,1,1,1,1,1,1,2,2,2,2],
+            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,2,2,2],
+            [2,2,2,2,2],
+            [3,0,0,0,0,0,0,0,0,0],
+            [1,1,1,1,1,1,1,1,2,2,2,2,2],
+            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+            [2,2,2,2,3],
+            [0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,2,2,2,3],
+            [3,3],
+        ],
+    },
+    2: {
+        name: '冰霜雪原',
+        theme: {
+            infoBg: '#0f1f2e',
+            panelBg: '#0a1520',
+            grass: '#0f1f2e',
+            path: '#b0bec5',
+            buildable: '#1a3a4a',
+            buildableBorder: 'rgba(180,210,240,0.18)',
+            gridLine: 'rgba(180,210,240,0.07)',
+            startGold: 280,
+            startLives: 12,
+        },
+        enemies: [
+            { name: '冰晶',   shape: 'diamond', color: '#88ccff', hp: 150, speed: 3.2, reward: 12, leakLives: 1, size: 0.35 },
+            { name: '雪球',   shape: 'circle', color: '#dde8f0', hp: 350, speed: 1.7, reward: 28, leakLives: 2, size: 0.5 },
+            { name: '冰巨人', shape: 'hexagon', color: '#5588cc', hp: 800, speed: 1.1, reward: 75, leakLives: 4, size: 0.65 },
+            { name: '暴风雪', shape: 'blizzard', color: '#bbddff', hp: 500, speed: 2.0, reward: 45, leakLives: 3, size: 0.55 },
+            { name: '冰龙',   shape: 'pentagon', color: '#3366cc', hp: 2000, speed: 0.7, reward: 230, leakLives: 10, size: 0.8 },
+        ],
+        waves: [
+            [0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,1,1,1,1,1],
+            [1,1,1,1,1,1,0,0,0,0,0,0,0,0],
+            [2],
+            [1,1,1,1,1,1,1,1,1,1,1,1],
+            [0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1],
+            [2,2,2],
+            [0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,2,2],
+            [4],
+            [1,1,1,1,1,1,1,1,2,2,2,2],
+            [3,3,3,3],
+            [0,0,0,0,0,0,0,0,0,0,0,0,3,3,3,1,1,1,1,1],
+            [2,2,2,2,2],
+            [4,0,0,0,0,0,0,0,0,0,0,0,0],
+            [1,1,1,1,1,1,1,1,2,2,2,2,2,3,3],
+            [3,3,3,3,3,3],
+            [2,2,2,2,4],
+            [0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,2,2,2,3,3],
+            [4,4],
+        ],
+    },
+};
+
+// Level-specific mutable state (set by startLevel)
+let ENEMY_DEFS = [];
+let WAVES = [];
+let THEME = {};
+let STARTING_GOLD = 300;
+let STARTING_LIVES = 15;
 
 // Path waypoints: enemies follow these in order (match path segments above)
 const WAYPOINTS = [
@@ -1022,25 +1089,23 @@ function renderGrid() {
         for (let col = 0; col < GRID_COLS; col++) {
             const x = toPixelX(col), y = toPixelY(row);
             if (grid[row][col] === 0) {
-                ctx.fillStyle = '#1a3a1a';
+                ctx.fillStyle = THEME.grass;
             } else if (grid[row][col] === 1) {
-                ctx.fillStyle = '#c4a45a';
+                ctx.fillStyle = THEME.path;
             } else {
-                ctx.fillStyle = '#223322';
+                ctx.fillStyle = THEME.buildable;
             }
             ctx.fillRect(x, y, cellSize, cellSize);
-            // Grid lines
-            ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+            ctx.strokeStyle = THEME.gridLine;
             ctx.lineWidth = 0.5;
             ctx.strokeRect(x, y, cellSize, cellSize);
         }
     }
-    // Buildable cell highlight
     for (let row = 0; row < GRID_ROWS; row++) {
         for (let col = 0; col < GRID_COLS; col++) {
             if (grid[row][col] === 2) {
                 const x = toPixelX(col), y = toPixelY(row);
-                ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+                ctx.strokeStyle = THEME.buildableBorder;
                 ctx.lineWidth = 1;
                 ctx.setLineDash([3, 3]);
                 ctx.strokeRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
@@ -1293,6 +1358,15 @@ function drawShape(ctx, shape, x, y, half, fillColor, strokeColor, rotation) {
         } else if (shape === 'diamond') {
             ctx.rotate(Math.PI / 4);
             ctx.rect(-half * 0.7, -half * 0.7, half * 1.4, half * 1.4);
+        } else if (shape === 'blizzard') {
+            // 3 circles in triangle formation
+            ctx.arc(0, -half * 0.45, half * 0.5, 0, Math.PI * 2);
+            ctx.fill(); ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(-half * 0.5, half * 0.4, half * 0.4, 0, Math.PI * 2);
+            ctx.fill(); ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(half * 0.5, half * 0.4, half * 0.4, 0, Math.PI * 2);
         } else if (shape === 'hexagon') {
             for (let i = 0; i < 6; i++) {
                 const a = (i * 2 * Math.PI / 6) - Math.PI / 2;
@@ -1495,6 +1569,16 @@ function showScreen(id) {
 }
 
 function startLevel(levelNum) {
+    const lv = LEVELS[levelNum];
+    ENEMY_DEFS = lv.enemies;
+    WAVES = lv.waves;
+    THEME = lv.theme;
+    STARTING_GOLD = lv.theme.startGold;
+    STARTING_LIVES = lv.theme.startLives;
+    // Apply theme to UI panels
+    document.getElementById('info-bar').style.background = lv.theme.infoBg;
+    document.getElementById('planning-panel').style.background = lv.theme.panelBg;
+    document.getElementById('playing-panel').style.background = lv.theme.panelBg;
     showScreen('game');
     init();
     updateUI();
